@@ -24,7 +24,8 @@ assert.deepEqual(['object.add', 'objects.arrange', 'shot.create', 'character.add
 const kinds = { 'character.setPose': 'pose', 'ik.setKey': 'pose', 'ik.applyPose': 'pose', 'character.setIkKey': 'pose', 'motion.rangePin.apply': 'pose',
   // One table with the first-edit kinds (#922): a recorded key and the rail are camera; key retiming and other
   // camera-block changes are shot edits; capturing the viewing camera is navigation, so it is other.
-  'shot.addKey': 'camera', 'shot.setCameraRail': 'camera', 'shot.clearCameraRail': 'camera',
+  // 2026-11-07 원장 1107-14ed67 — 새 구역 액션의 카메라 편집 분류를 고정한다.
+  'shot.setLookZones': 'camera', 'shot.addKey': 'camera', 'shot.setCameraRail': 'camera', 'shot.clearCameraRail': 'camera',
   'shot.setCamera': 'shot', 'shot.moveKey': 'shot', 'shot.setCameraMode': 'shot', 'shot.setLens': 'shot', 'shot.captureCamera': 'other',
   'object.add': 'object', 'object.update': 'object', 'objects.arrange': 'object', 'character.add': 'object', 'character.move': 'object',
   'shot.create': 'shot', 'shot.setRange': 'shot', 'shot.remove': 'shot', 'motion.set': 'prompt',

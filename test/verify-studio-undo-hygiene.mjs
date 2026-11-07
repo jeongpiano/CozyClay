@@ -150,6 +150,8 @@ const COMMAND_INPUTS = {
 	"shot.create": {}, "shot.split": { shotId: "shot-1" }, "shot.duplicate": { shotId: "shot-1" }, "shot.remove": { shotId: "shot-1" },
 	"shot.setRange": { shotId: "shot-1", range: { startFrame: 1, endFrameExclusive: 15 } }, "shot.reorder": { shotId: "shot-1", startFrame: 2 },
 	"shot.setCameraRail": { shotId: "shot-1", points: [{ x: -2, z: 4 }, { x: 3, z: 4 }] }, "shot.clearCameraRail": { shotId: "shot-1" },
+	// 2026-11-07 원장 1107-14ed67 — 구역 편집도 한 undo 항목 안에서만 저장되어야 한다.
+	"shot.setLookZones": { shotId: "shot-1", lookZones: [{ id: "z1", target: { ids: ["actor"] }, range: { t0: 0.3, t1: 0.55 } }] },
 	"shot.createStill": { caption: "Panel" }, "shot.setCaption": { shotId: "shot-1", caption: "Panel" },
 	"shot.setCastOverride": { shotId: "shot-1", characterId: "actor", override: { x: 1, z: 2, rot: 0 } }, "shot.setHold": { shotId: "shot-1", hold: 24 },
 	"shot.set": { id: "shot-1", set: { targetModel: "seedance-2.5" } }, "shot.rename": { shotId: "shot-1", name: "Renamed" },
@@ -330,7 +332,8 @@ const cases = {
 	},
 	async "every command mutation writes inside one entry of its undo domain"() {
 		const mutations = Object.values(COMMAND_MODULES).flatMap(module => module.declarations).filter(entry => entry.kind === "mutation");
-		assert.equal(mutations.length, 82);
+		// 2026-11-07 원장 1107-14ed67 — 새 레일 구역 액션까지 빠짐없이 undo 검증한다.
+		assert.equal(mutations.length, 83);
 		for (const declaration of mutations) {
 			// A new shot needs free room at the playhead; the others act inside shot-1.
 			const f = commandFixture({ frame: declaration.id === "shot.create" ? 24 : 8, still: ["shot.setHold", "shot.createStill"].includes(declaration.id) }), [name] = Object.entries(COMMAND_MODULES).find(([, module]) => module.declarations.includes(declaration));

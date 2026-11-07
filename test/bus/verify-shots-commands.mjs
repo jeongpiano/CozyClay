@@ -14,6 +14,8 @@ const inputs = {
   'shot.setRange': { shotId: 'shot-a', range: { startFrame: 1, endFrameExclusive: 23 } },
   'shot.reorder': { shotId: 'shot-a', startFrame: 25 },
   'shot.setCameraRail': { shotId: 'shot-a', points: [{ x: -2, z: 4 }, { x: 2, z: 4 }] },
+  // 2026-11-07 원장 1107-14ed67 — 구역 편집도 모든 명령 출처에서 저장·undo 계약을 지킨다.
+  'shot.setLookZones': { shotId: 'shot-a', lookZones: [{ id: 'z1', target: { ids: ['actor-a'] }, range: { t0: 0.3, t1: 0.55 } }] },
   'shot.clearCameraRail': { shotId: 'shot-a' },
   'shot.rename': { shotId: 'shot-a', name: 'Wide' }, 'shot.setCameraMode': { shotId: 'shot-a', mode: 'follow' },
   'shot.createStill': { caption: 'Panel' }, 'shot.setCaption': { shotId: 'shot-a', caption: 'Panel' },
@@ -26,7 +28,7 @@ function owned(f) { assert.ok(f.shots.documentStore?.owns('shot'), 'the shipped 
 function seed(f, command) {
   const shot = seedShot();
   if (['shot.setHold', 'shot.createStill'].includes(command)) shot.kind = 'still';
-  if (command === 'shot.clearCameraRail') Object.assign(shot.camera, { mode: 'rail', cameraRail: [{ x: -2, z: 4 }, { x: 2, z: 4 }] });
+  if (['shot.clearCameraRail', 'shot.setLookZones'].includes(command)) Object.assign(shot.camera, { mode: 'rail', cameraRail: [{ x: -2, z: 4 }, { x: 2, z: 4 }] });
   f.shots.load({ shots: [shot], frameCount: 120, camera: f.actual.readStudioState().camera });
   f.live.current.timeline.currentFrame = command === 'shot.create' ? 30 : 12;
 }

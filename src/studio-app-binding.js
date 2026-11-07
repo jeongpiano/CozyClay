@@ -274,10 +274,11 @@ export function createStudioAppBinding(ports) {
 				// only an arrange/frame receipt carries overlap or framing numbers. Anything else is measured here.
 				const measuredBy = { placement: "overlapIds", framing: "screenFraction" }, unmeasured = receipt && args.checks.some(check => measuredBy[check] && receipt.checks?.[measuredBy[check]] === undefined);
 				const measured = args.targets ? entityIds(args.targets) : unmeasured ? entityIds(receipt.affectedIds) : null;
+				// 2026-11-07 원장 1107-14ed67 — geometry도 내보내기와 같은 프레임 샘플러로 레일 겨냥을 읽는다.
 				// A framing check also carries the cut's geometry, read from the scene: side of the action line
 				// and sight lines per shot, the receipt's or targets' shots first (8 at most).
 				const result = { receiptId: receipt?.receiptId ?? null, revision: s.revision, evidenceRevision, stale: evidenceRevision !== s.revision, checks: measured ? { coverage: "current-scene-targets" } : receipt.checks,
-					verification: receipt?.verification ?? null, semanticStatus: "unavailable", visualRefs: [], unsupportedChecks: [], unsupportedReasons: {}, ...(args.checks.includes("framing") ? { geometry: shotGeometryFacts(scene, { first: receipt ? receipt.affectedIds : args.targets, ports: { bounds: ports.bounds } }) } : {}) }, reasons = result.unsupportedReasons, verified = [], skipped = [], pending = [];
+					verification: receipt?.verification ?? null, semanticStatus: "unavailable", visualRefs: [], unsupportedChecks: [], unsupportedReasons: {}, ...(args.checks.includes("framing") ? { geometry: shotGeometryFacts(scene, { first: receipt ? receipt.affectedIds : args.targets, ports: { bounds: ports.bounds, sampleStateAt: ports.sampleStateAt } }) } : {}) }, reasons = result.unsupportedReasons, verified = [], skipped = [], pending = [];
 				// Lighting is measured from the rendered shot frame (studio-lighting-check.js), never from a receipt.
 				if (args.checks.includes("lighting")) verifyLighting(result, args.targets ?? receipt.affectedIds, scene, ports);
 				for (const check of args.checks.filter(check => !["motion", "lighting"].includes(check) && measured)) {

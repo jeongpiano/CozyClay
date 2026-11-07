@@ -15,6 +15,8 @@ const inputs = {
  'shot.create': {}, 'shot.split': { shotId: 'shot-1' }, 'shot.duplicate': { shotId: 'shot-1' }, 'shot.remove': { shotId: 'shot-1' },
  'shot.setRange': { shotId: 'shot-1', range: { startFrame: 1, endFrameExclusive: 15 } }, 'shot.reorder': { shotId: 'shot-1', startFrame: 2 },
  'shot.setCameraRail': { shotId: 'shot-1', points: [{ x: -2, z: 4 }, { x: 3, z: 4 }] }, 'shot.clearCameraRail': { shotId: 'shot-1' },
+ // 2026-11-07 원장 1107-14ed67 — 새 구역 액션도 실제 App의 Undo로 원상복구되어야 한다.
+ 'shot.setLookZones': { shotId: 'shot-1', lookZones: [{ id: 'z1', target: { ids: ['actor-a'] }, range: { t0: 0.3, t1: 0.55 } }] },
  'shot.setCameraMode': { shotId: 'shot-1', mode: 'follow' }, 'shot.rename': { shotId: 'shot-1', name: 'Renamed' },
  'shot.createStill': { caption: 'Panel' }, 'shot.setCaption': { shotId: 'shot-1', caption: 'Panel' },
  'shot.setCastOverride': { shotId: 'shot-1', characterId: 'actor-a', override: { x: 1, z: 2, rot: 0 } }, 'shot.setHold': { shotId: 'shot-1', hold: 24 },

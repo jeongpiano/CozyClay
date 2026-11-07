@@ -15,6 +15,9 @@ import { StudioProtocolError, StudioSchemas, freezeStudioData, validateStudioSch
  * file); it answers "completed", with the new host when the open scene moved. */
 export const STUDIO_ACTION_KINDS = freezeStudioData(["mutation", "transient", "job", "document"]);
 
+// 2026-11-07 원장 1107-14ed67 — 두 레일 액션의 구역 규격이 어긋나지 않게 공유한다.
+import { railActions } from "./camera-rail-actions.js";
+
 const idSchema = StudioSchemas.TargetGuard.properties.targetId;
 const frame = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const input = (required = {}, optional = {}) => ({ type: "object", properties: { ...required, ...optional }, required: Object.keys(required), additionalProperties: false });
@@ -110,9 +113,7 @@ export const STUDIO_ACTIONS = freezeStudioData([
 		description: "Delete the character's whole IK key at frame (every track keyed there), like the Full-Body lane's delete." },
 	{ id: "character.clearIkKeys", label: "Clear IK keys", kind: "mutation", undoDomain: "motion", input: input(characterId),
 		description: "Delete every IK key of the character, returning it to its take or pose without corrections." },
-	{ id: "shot.setCameraRail", label: "Set camera rail", kind: "mutation", undoDomain: "shot",
-		input: input({ ...shotId, points: { type: "array", items: floorPoint, minItems: 2, maxItems: 512 } }, { height: { oneOf: [{ type: "number", minimum: 0.1, maximum: 30 }, { type: "array", items: input({ t: { type: "number", minimum: 0, maximum: 1 }, height: { type: "number", minimum: 0.1, maximum: 30 } }), minItems: 2, maxItems: 8 }] }, aim: { oneOf: [{ type: "array", items: idSchema, minItems: 1, maxItems: 4 }, input({ x: num, y: num, z: num }), { type: "null" }] }, aimHeight: { type: "number", minimum: 0, maximum: 30 }, focalMm: { oneOf: [{ type: "number", minimum: 10, maximum: 300 }, { type: "null" }] } }),
-		description: "Lay a shot's dolly rail through points (world floor x/z metres, in travel order) and put the shot's camera on it, like drawing the rail in the Top-View: the camera runs the rail at an even speed over the whole shot (or its authored rail-follow range), so a push-in, pull-out, orbit, track or crane is one call with 2-6 points (a line, or an arc through a few points; the rail is a smooth curve through them). height is the lens height in metres, one number or crane marks [{ t: 0..1 along the rail, height }] (default the follow height, 1.6). aim is what the camera holds: up to 4 character or object ids (their middle, frame by frame: a character's chest, an object's middle) or a world point { x, y, z }; without an aim it follows the scene's first character. aimHeight puts a cast aim at that world height instead of the chest, e.g. 0.9 to hold a whole standing body, 1.6 for faces. focalMm is the shot's lens (default the scene lens). It replaces any rail the shot had and keeps any height, aim or lens you leave out (null clears aim and lens), and it removes the camera keys the rail covers. Answers the rail's length, speed, height, aim and lens; check the framing with verify_result { targets, checks: [\"framing\"], range: the shot's frames } and a contact sheet. Read rails with inspect_studio { scope: \"shot\" }." },
+	...railActions,
 	{ id: "shot.clearCameraRail", label: "Delete camera rail", kind: "mutation", undoDomain: "shot", input: input(shotId),
 		description: "Delete a shot's camera rail; the shot's camera goes back to following its subject at the current distance." },
 	{ id: "shot.setCameraMode", label: "Set shot camera mode", kind: "mutation", undoDomain: "shot", input: input({ ...shotId, mode: { type: "string", enum: ["keys", "follow", "rail"] } }),
