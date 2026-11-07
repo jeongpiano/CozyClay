@@ -2,8 +2,9 @@
 # 실행: 대시보드 또는 사람이 Python 3 명령줄에서 호출한다.
 # 요청: 2026-11-06 원장 #32056·#32058, 장면 자동 생성과 수정.
 # 연결: library/*.json, /Users/open/content_studio/core/llm.py, 지정한 입출력 JSON.
-# 이력·되돌리기: SPEC_llm.md; 호출을 중단하고 이 파일을 제거한다.
+# 이력·되돌리기: SPEC_llm.md·SPEC_llm_v2.md; v2 이전은 cozy_llm.py.bak-20261108-v2 복원.
 import argparse
+import base64
 import json
 import os
 import math
@@ -14,6 +15,20 @@ sys.path.insert(0, '/Users/open/content_studio')
 from core.llm import llm_chat_meta  # 2026-11-06 cctb-44: provider·model 기록(원장 #32068·#32069 로컬/클라우드 선택)
 
 ROOT = Path(__file__).resolve().parent
+
+
+# 2026-11-08 Codex — 대시보드가 library 이름과 변형을 실제 목록에서 고르게 한다.
+def _preset_catalog(library=None):
+    rows = []
+    for path in sorted((library or ROOT / 'library').glob('*.json')):
+        preset = json.loads(path.read_text(encoding='utf-8'))
+        variants = preset.get('camera_variants') or {}
+        names = list(variants) if isinstance(variants, dict) else [v['name'] if isinstance(v, dict) else v for v in variants]
+        rows.append(json.dumps({'library': path.stem, 'name': preset.get('name', path.stem),
+                                'desc': preset.get('desc', ''), 'camera_variants': names}, ensure_ascii=False))
+    return '\n'.join(rows)
+
+
 SYSTEM = '''Use literal numbers everywhere (no ${param} templates). Camera rail points must circle or pass beside people, never through them. Height marks t are fractions 0..1.
 Return exactly one complete CozyClay preset JSON object with name, desc, frames,
 params (object), objects (array), characters (array), and camera (object).
@@ -40,6 +55,118 @@ Set frames exactly to the requested number. In feedback mode return the entire
 revised preset and changes as an array of sentences. Examples follow verbatim:
 '''+ '\n\n'.join((ROOT / 'library' / name).read_text(encoding='utf-8') for name in
                 ('corridor_walk_pushin.json', 'seated_side_rail.json'))
+
+
+# 2026-11-08 Codex — 콘티·대본·앞뒤 씬을 배치와 화각의 근거로 함께 읽게 한다.
+SYSTEM += '''
+Preset catalog (one entry per line):
+''' + _preset_catalog() + '''
+Use the best-fitting catalog preset as the starting point, or create a new scene
+if none fits. If a preset is explicitly requested, use that starting preset.
+Return top-level "based_on": "<preset name>" (empty string for a new scene),
+and "variant": "<chosen camera variant name>" (empty string if none).
+Shot size determines focalMm AND camera distance: extreme wide 16-20mm;
+wide 24-28mm (full body plus surroundings); medium 35mm (waist up);
+close-up 50-85mm (face and shoulders). Adjust distance to achieve this framing.
+Follow the storyboard image's shot size, camera angle/elevation, and character
+screen positions. Use the caption when no image is available. Read the original
+script for action, dialogue and timing; neighbor scenes are continuity context,
+not extra action to perform in this scene.
+Match the previous scene's ending camera side and character positions: stay on
+the same side of the 180-degree line and preserve characters' left/right order.
+End with a composition that transitions naturally into the next scene's opening.
+Use a smooth camera path in one direction, with no sharp turns or backtracking.
+Never complete two or more full orbits in 15 seconds (keep orbit speed below
+two revolutions per 15 seconds). For narrow gaps such as between chair and legs,
+set camera.gap to true and keep at least 0.03m clearance. Otherwise keep the
+camera at least 0.2m from people. Do not enter a person's body or clothing.
+Return "camera_story" as an array of 3-6 Korean sentences, each describing a
+time interval and its camera framing/movement, e.g. "0~2초 식탁 옆 넓은 화면".
+camera_story, based_on, variant and changes are display metadata, not scene fields.
+In feedback mode return the entire revised scene plus changes (sentence array).
+If feedback starts with a timestamp such as "[at 3.2s]", modify only the camera
+or action near that time; preserve the rest of the scene and its total duration.
+'''
+
+
+# 2026-11-08 Codex — 이미지 전송 본문을 분리해 편집기 없이 base64 첨부를 검증한다.
+def _build_local_request(model, prompt, images=None):
+    if images and len(images) > 3:
+        raise ValueError('at most three images are allowed')
+    # 2026-11-08 cctb-78 실측: Ollama 기본 문맥 4096 이라 v2 요청(약 1만~4만 토큰)이 HTTP 400 → num_ctx 를 넉넉히(모델 한도 안에서 Ollama 가 자름)
+    body = {'model': model, 'prompt': SYSTEM + '\n\n' + prompt, 'stream': False,
+            'think': False, 'format': 'json', 'keep_alive': 120, 'options': {'num_ctx': 32768}}
+    if images:
+        body['images'] = list(images)
+    return body
+
+
+# 2026-11-08 cctb-78 실측: 원본 PNG 2장(각 1.5~2MB)이 문맥을 크게 먹음 → 긴 변 768 JPEG 로 줄여 보낸다
+def _small_image_b64(path):
+    import io
+    from PIL import Image
+    try:
+        im = Image.open(path).convert('RGB')
+    except Exception:  # 그림으로 못 여는 파일(시험용 가짜 등)은 원본 그대로
+        return base64.b64encode(path.read_bytes()).decode('ascii')
+    im.thumbnail((768, 768))
+    buf = io.BytesIO(); im.save(buf, 'JPEG', quality=85)
+    return base64.b64encode(buf.getvalue()).decode('ascii')
+
+
+# 2026-11-08 cctb-78 실측: 대시보드 씬 dict 에는 이전 H3 프롬프트·이력 등 큰 칸이 많아 프롬프트가 8만 자 → 판단에 필요한 칸만
+SCENE_KEYS = ('n', 'title', 'description', 'dialogue', 'camera', 'shot', 'shot_size', 'angle', 'location', 'characters', 'cast',
+              'duration_s', 'image_prompt', 'video_action', 'h3_action', 'mood', 'lighting', 'end_state', 'notes')
+
+
+def _trim_scene(scene):
+    keep = {k: scene[k] for k in SCENE_KEYS if k in scene and scene[k] not in (None, '', [], {})}
+    return {k: (v[:1500] if isinstance(v, str) else v) for k, v in keep.items()} or scene
+
+
+# 2026-11-08 Codex — 클라우드에는 글만, 로컬에는 콘티·앞 끝·뒤 첫 순서로 최대 세 장을 보낸다.
+def _context(args):
+    parts, images, labels = [], [], []
+
+    def attach(label, filename, relative_to=None):
+        if args.provider != 'local' or not filename:
+            return
+        path = Path(filename)
+        if not path.is_absolute() and relative_to is not None:
+            path = relative_to / path
+        if not path.is_absolute() or path.suffix.lower() not in ('.png', '.jpg', '.jpeg'):
+            raise ValueError(f'{label} must be an absolute PNG/JPG path')
+        images.append(_small_image_b64(path))
+        labels.append(label)
+
+    attach('storyboard for this scene', args.conti_image)
+    if args.conti_caption:
+        parts.append('Storyboard caption: ' + args.conti_caption)
+    if args.script:
+        parts.append('Original script (dialogue and stage directions): ' + args.script)
+    if args.neighbors:
+        source = Path(args.neighbors).resolve()
+        neighbors = json.loads(source.read_text(encoding='utf-8'))
+        if not isinstance(neighbors, dict):
+            raise ValueError('neighbors must be a JSON object')
+        context = {}
+        for side, label in (('prev', 'previous scene ending'), ('next', 'next scene opening')):
+            neighbor = neighbors.get(side)
+            if neighbor is not None and not isinstance(neighbor, dict):
+                raise ValueError(f'neighbors.{side} must be an object or null')
+            context[side] = None if neighbor is None else {k: v for k, v in neighbor.items() if k not in ('end_frame', 'start_frame')}
+            if neighbor:
+                # 2026-11-08 Codex — 명세의 next:{...}는 prev와 같은 end_frame 필드도 쓸 수 있다.
+                filename = neighbor.get('end_frame') if side == 'prev' else neighbor.get('start_frame') or neighbor.get('end_frame')
+                attach(label, filename, source.parent)
+        parts.append('Neighbor scene continuity: ' + json.dumps(context, ensure_ascii=False))
+    if args.preset:
+        from cozy_preset import load
+        preset = load(args.preset)
+        parts.append('Required starting preset (return its name in based_on): ' + json.dumps(preset, ensure_ascii=False))
+    if labels:
+        parts.append('Attached images in order: ' + '; '.join(f'{i + 1}: {label}' for i, label in enumerate(labels)))
+    return '\n'.join(parts), images
 
 
 def _openai_chat(provider, prompt):
@@ -103,6 +230,15 @@ def _normalize(spec):
     # 2026-11-06 cctb-44 실측: gemma4 가 높이 표시 9개를 써서 편집기가 거절(shot.setCameraRail height 는 2~8개, 점은 {x,z} 만 받음) → 고르게 8개로 추리고 점의 y 는 버린다
     if isinstance(hs, list) and len(hs) > 8:
         cam['height'] = [hs[round(i * (len(hs) - 1) / 7)] for i in range(8)]
+    # 2026-11-08 cctb-78 실측(씬1 실제 호출): 바닥 가까운 모기 시점에서 높이 0.05 를 써 검사(>=0.1)에 3번 다 탈락 → 0.1 로 올린다(편집기 하한)
+    if isinstance(cam, dict):
+        h = cam.get('height')
+        if isinstance(h, (int, float)) and h < 0.1:
+            cam['height'] = 0.1
+        elif isinstance(h, list):
+            for mark in h:
+                if isinstance(mark, dict) and isinstance(mark.get('height'), (int, float)) and mark['height'] < 0.1:
+                    mark['height'] = 0.1
     # 2026-11-06 cctb-44 ec 실측: DeepSeek 가 5초(120프레임)에 walkTo 를 f10 부터 142프레임으로 써 편집기가 거절 → 걸음 수를 줄여 마지막 프레임 안에 넣는다(길이 = 16 + steps*period + 18)
     frames = spec.get('frames') if isinstance(spec, dict) else None
     if isinstance(frames, int):
@@ -159,6 +295,14 @@ def validate(spec, frames):
             errors.append(f'{key} must be {typ.__name__}')
     if spec.get('frames') != frames:
         errors.append(f'frames must equal {frames}')
+    # 2026-11-08 Codex — 표시 메타데이터는 허용하되 대시보드에 잘못된 자료형을 돌려주지 않는다.
+    for key in ('based_on', 'variant'):
+        if key in spec and not isinstance(spec[key], str):
+            errors.append(f'{key} must be a string')
+    if 'camera_story' in spec:
+        story = spec['camera_story']
+        if not isinstance(story, list) or not 3 <= len(story) <= 6 or any(not isinstance(line, str) or not line.strip() for line in story):
+            errors.append('camera_story must be an array of 3-6 nonempty Korean sentences with time intervals')
     for i, character in enumerate(spec.get('characters', []) if isinstance(spec.get('characters'), list) else []):
         if not isinstance(character, dict) or not isinstance(character.get('motion'), list):
             errors.append(f'characters[{i}].motion must be an array')
@@ -181,6 +325,9 @@ def validate(spec, frames):
     for bad in _strs(spec):
         errors.append(f'{bad}: use a literal number, not a ${{param}} template')
     camera = spec.get('camera')
+    # 2026-11-08 Codex — 좁은 틈 3cm와 일반 경로 0.2m를 구분해 기존 0.25m 오거절을 막는다.
+    if isinstance(camera, dict) and 'gap' in camera and not isinstance(camera['gap'], bool):
+        errors.append('camera.gap must be a boolean')
     chars_at = []
     for c in spec.get('characters', []) if isinstance(spec.get('characters'), list) else []:
         for m in c.get('motion', []) if isinstance(c, dict) else []:
@@ -194,8 +341,9 @@ def validate(spec, frames):
         for k, pt in enumerate(camera.get('points') or []):
             if isinstance(pt, dict) and all(isinstance(pt.get(a), (int, float)) for a in ('x', 'z')):
                 for at in chars_at:
-                    if math.hypot(pt['x'] - at[0], pt['z'] - at[1]) < 0.25:
-                        errors.append(f'camera.points[{k}] passes through a character at {at}; keep at least 0.25 m away')
+                    clearance = 0.03 if camera.get('gap') is True else 0.2
+                    if math.hypot(pt['x'] - at[0], pt['z'] - at[1]) < clearance:
+                        errors.append(f'camera.points[{k}] passes through a character at {at}; keep at least {clearance} m away')
         # 2026-11-06 cctb-44 실측(hermes→5070 Qwen): 복도 벽(x=±1.6) 바깥 x=±2.5 로 레일을 돌려 6장 중 4장이 벽만 보였다 → 레일 점과 인물 사이를 벽 상자가 막으면 되묻는다
         targets = list(chars_at)
         objs = {o.get('name'): o for o in spec.get('objects', []) if isinstance(o, dict)} if isinstance(spec.get('objects'), list) else {}
@@ -230,15 +378,25 @@ def validate(spec, frames):
     return errors
 
 
-def main():
-    parser = argparse.ArgumentParser(description='씬 글을 CozyClay 장면 JSON으로 생성')
+# 2026-11-08 Codex — 기존 필수 인자를 유지하면서 대시보드의 선택 입력을 독립적으로 시험한다.
+def _build_parser():
+    parser = argparse.ArgumentParser(description='씬·콘티·대본을 CozyClay 장면 JSON으로 생성')
     parser.add_argument('--scene-json', required=True)
     parser.add_argument('--feedback')
     parser.add_argument('--current')
     parser.add_argument('--seconds', required=True, type=float)
     parser.add_argument('--out', required=True)
     parser.add_argument('--provider', default='local', choices=['local', 'cloud', 'hermes', 'deepseek'])  # 2026-11-06 cctb-44 원장 #32069: 고를 수 있게, 기본 로컬
-    args = parser.parse_args()
+    parser.add_argument('--conti-image', help='이 씬 콘티 PNG/JPG 절대경로 (local 이미지 입력)')
+    parser.add_argument('--conti-caption', help='콘티 그림 설명 (모든 provider)')
+    parser.add_argument('--neighbors', help='앞 씬 끝·뒤 씬 첫 상태를 담은 JSON 파일')
+    parser.add_argument('--script', help='대사·지문 원문')
+    parser.add_argument('--preset', help='출발 프리셋 library 이름')
+    return parser
+
+
+def main(argv=None):
+    args = _build_parser().parse_args(argv)
     if not math.isfinite(args.seconds) or args.seconds <= 0 or round(args.seconds * 24) < 1:
         raise ValueError('seconds must produce at least one frame')
     out = Path(args.out)
@@ -248,7 +406,11 @@ def main():
     if not isinstance(scene, dict):
         raise ValueError('scene must be a JSON object')
     frames = round(args.seconds * 24)
-    prompt = f'Create a scene with exactly {frames} frames. Scene: ' + json.dumps(scene, ensure_ascii=False)
+    prompt = f'Create a scene with exactly {frames} frames. Scene: ' + json.dumps(_trim_scene(scene), ensure_ascii=False)
+    # 2026-11-08 Codex — 재시도에도 같은 이미지와 연속성 재료를 유지한다.
+    context, images = _context(args)
+    if context:
+        prompt += '\n' + context
     feedback_mode = bool(args.current and args.feedback)
     if feedback_mode:
         current = json.loads(Path(args.current).read_text(encoding='utf-8'))
@@ -267,11 +429,18 @@ def main():
                     try:
                         from core.llm import local_model, _post
                         base, lm = local_model()
+                        # 2026-11-08 cctb-78 실측: 기본 로컬(gemma4:e4b-fast)은 v2 의 based_on·camera_story 를 비워 냄 → COZY_LLM_LOCAL_MODEL 로 큰 모델을 고를 수 있게
+                        lm = os.environ.get('COZY_LLM_LOCAL_MODEL') or lm
                         if lm:
-                            r = _post(base + '/api/generate', {'model': lm, 'prompt': SYSTEM + '\n\n' + prompt, 'stream': False,
-                                                               'think': False, 'format': 'json', 'keep_alive': 120}, timeout=240)
+                            # 2026-11-08 Codex — 로컬 generate 경로에 콘티와 앞뒤 씬 이미지를 함께 보낸다.
+                            r = _post(base + '/api/generate', _build_local_request(lm, prompt, images), timeout=240)
                             text, used_provider, used_model = r.get('response') or '', 'local', lm
+                        if images and not text:
+                            raise RuntimeError('local image request returned no response or no local model is available')
                     except Exception:
+                        # 2026-11-08 Codex — 이미지가 있는 호출을 글 전용 폴백으로 조용히 바꾸면 콘티가 사라진다.
+                        if images:
+                            raise
                         text = None
                 if not text:
                     text, used_provider, used_model = llm_chat_meta(prompt, system=SYSTEM, provider=('local' if args.provider == 'local' else 'auto'), json_mode=False, timeout=240)
@@ -286,12 +455,17 @@ def main():
             if feedback_mode and (not isinstance(spec, dict) or not isinstance(spec.get('changes'), list) or any(not isinstance(c, str) for c in spec['changes'])):
                 errors.append('changes must be an array of sentences')
             if not errors:
+                # 2026-11-08 Codex — 화면용 설명은 stdout에 남기고 편집기용 장면에서는 떼어 낸다.
+                metadata = {key: spec.pop(key, default) for key, default in
+                            (('based_on', ''), ('variant', ''), ('camera_story', []))}
+                gap = spec['camera'].get('gap', False)
                 changes = spec.pop('changes', [])
                 if not isinstance(changes, list) or any(not isinstance(c, str) for c in changes):
                     changes = []
                 out.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
                 # llm_chat deliberately discards provider metadata; do not claim a guessed model.
-                return {'ok': True, 'spec': str(out), 'changes': changes, 'provider': used_provider, 'model': used_model}
+                return {'ok': True, 'spec': str(out), 'changes': changes, 'provider': used_provider, 'model': used_model,
+                        **metadata, 'gap': gap}
             last_error = '; '.join(errors)
             prompt += '\nCorrect this invalid response and return the complete JSON. Errors: ' + last_error
             prompt += '\nPrevious response: ' + json.dumps(spec, ensure_ascii=False)
@@ -299,7 +473,8 @@ def main():
             last_error = str(error)
         if attempt == 0:
             continue
-    raise RuntimeError('LLM failed after two attempts: ' + last_error)
+    # 2026-11-08 Codex — 실제 세 번의 시도와 오류 안내가 일치해야 진단을 오해하지 않는다.
+    raise RuntimeError('LLM failed after three attempts: ' + last_error)
 
 
 if __name__ == '__main__':

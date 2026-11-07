@@ -3,6 +3,7 @@
 # 요청: 2026-11-06 사용자, 반복 장면을 빠르게 불러오기 위해 작성 (1106-db2473).
 # 연결: presets/library/*.json, ../node_modules/.bin/cclay, 로컬 CozyClay 허브.
 # 이력·되돌리기: 1106-db2473; 사용을 중지하려면 이 파일과 library를 제거한다.
+# 2026-11-08 Codex — 드라마 카메라 선택 지원; 복원: cozy_preset.py.bak-20261108-drama.
 import argparse
 import ast
 import json
@@ -148,8 +149,14 @@ class Live:
 
 
 # 2026-11-06 Codex — 대시보드가 동일한 프리셋 적용 경로를 호출하고 길이를 맞춘다.
-def apply(name, overrides=None, live=None, *, frames=None, workspace=None):
+def apply(name, overrides=None, live=None, *, frames=None, workspace=None, variant=None):
     preset = load(name) if isinstance(name, str) else name
+    # 2026-11-08 Codex — 장면을 지우기 전에 변형을 확인하고 선택 카메라의 길이도 함께 맞춘다.
+    if variant is not None:
+        variants = preset.get('camera_variants', {})
+        if variant not in variants:
+            raise ValueError('알 수 없는 카메라 변형: ' + variant + ' (사용 가능: ' + ', '.join(variants) + ')')
+        preset = {**preset, 'camera': variants[variant]}
     changes = overrides or {}
     live = live or Live(workspace)
     if isinstance(changes, dict):
@@ -349,6 +356,8 @@ def main():
     list_parser = sub.add_parser('list'); list_parser.add_argument('--json', action='store_true')
     show = sub.add_parser('show'); show.add_argument('name', nargs='?')
     apply_parser = sub.add_parser('apply'); apply_parser.add_argument('name'); apply_parser.add_argument('--set', action='append', default=[]); apply_parser.add_argument('--workspace'); apply_parser.add_argument('--dry-run', action='store_true')
+    # 2026-11-08 Codex — 동일한 배치에서 대화 커버리지만 골라 적용할 수 있게 한다.
+    apply_parser.add_argument('--variant', help='camera_variants의 카메라 이름')
     save_parser = sub.add_parser('save'); save_parser.add_argument('name'); save_parser.add_argument('--desc', default=''); save_parser.add_argument('--workspace')
     depth = sub.add_parser('export-depth'); depth.add_argument('out')
     args = parser.parse_args()
@@ -362,17 +371,20 @@ def main():
                 for key, default in p.get('params', {}).items():
                     info = meta.get(key, {})
                     params.append({'key': key, 'label': info.get('label', key), 'type': type(default).__name__, 'default': default, 'min': info.get('min'), 'max': info.get('max')})
-                rows.append({'id': path.stem, 'name': p['name'], 'desc': p.get('desc', ''), 'frames': p['frames'], 'params': params})
+                # 2026-11-08 Codex — 기존 목록 소비자가 카메라 선택지를 함께 발견하게 한다.
+                rows.append({'id': path.stem, 'name': p['name'], 'desc': p.get('desc', ''), 'frames': p['frames'], 'params': params, 'variants': list(p.get('camera_variants', {}))})
             else:
                 print(f"{p['name']}\t{p.get('desc', '')}\t{p['frames']}프레임\t인물 {len(p.get('characters', []))}명")
         if args.json:
             print(json.dumps(rows, ensure_ascii=False))
     elif args.command == 'show':
         if args.name:
+            # 2026-11-08 Codex — 원본 JSON의 camera_variants 이름과 카메라 설정을 그대로 보여 준다.
             print(json.dumps(load(args.name), ensure_ascii=False, indent=2))
         else:
             parser.error('show에는 프리셋 이름이 필요합니다')
-    elif args.command == 'apply': apply(load(args.name), args.set, Live(args.workspace, args.dry_run))
+    # 2026-11-08 Codex — 명령줄과 대시보드의 함수 호출이 같은 변형 선택 경로를 쓴다.
+    elif args.command == 'apply': apply(load(args.name), args.set, Live(args.workspace, args.dry_run), variant=args.variant)
     elif args.command == 'save': save(args.name, args.desc, Live(args.workspace))
     else: print('깊이 영상 내보내기는 구현되지 않았습니다. 편집기 메뉴에서 직접 내보내세요.')
 

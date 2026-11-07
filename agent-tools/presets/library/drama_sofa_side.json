@@ -1,0 +1,384 @@
+{
+  "_header": {
+    "목적": "소파에 나란히 앉아 안쪽을 향하는 A·B, 앞 낮은 탁자",
+    "실행": "사용자·콘티마법사가 cozy_preset.py apply로 적용",
+    "요청": "2026-11-08 원장·사용자 — SPEC_presets_drama.md 대화 8종 구현 (cctb-78)",
+    "연결": "presets/cozy_preset.py, cozy_clearance.py, SPEC_presets_drama.md",
+    "이력·되돌리기": "2026-11-08 Codex — 쿠션 둘은 같은 소파의 좌석이며 60도로 안쪽을 향한다. 사용 중지·되돌리기: 이 JSON 삭제"
+  },
+  "name": "drama_sofa_side",
+  "desc": "소파에 나란히 앉아 안쪽을 향하는 A·B, 앞 낮은 탁자",
+  "frames": 120,
+  "params": {
+    "seat_height": 0.42,
+    "table_height": 0.38,
+    "camera_distance": 4.3
+  },
+  "objects": [
+    {
+      "name": "sofa_seat_a",
+      "kind": "cube",
+      "pos": [
+        -0.7,
+        0,
+        0
+      ],
+      "scale": [
+        0.85,
+        "${seat_height}",
+        0.8
+      ],
+      "color": "#577b83",
+      "rot": [
+        0,
+        60,
+        0
+      ]
+    },
+    {
+      "name": "sofa_seat_b",
+      "kind": "cube",
+      "pos": [
+        0.7,
+        0,
+        0
+      ],
+      "scale": [
+        0.85,
+        "${seat_height}",
+        0.8
+      ],
+      "color": "#577b83",
+      "rot": [
+        0,
+        -60,
+        0
+      ]
+    },
+    {
+      "name": "sofa_back",
+      "kind": "cube",
+      "pos": [
+        0,
+        0.42,
+        -0.48
+      ],
+      "scale": [
+        2.6,
+        0.55,
+        0.18
+      ],
+      "color": "#496973"
+    },
+    {
+      "name": "sofa_arm_a",
+      "kind": "cube",
+      "pos": [
+        -1.3,
+        0,
+        0
+      ],
+      "scale": [
+        0.18,
+        0.65,
+        0.9
+      ],
+      "color": "#496973"
+    },
+    {
+      "name": "sofa_arm_b",
+      "kind": "cube",
+      "pos": [
+        1.3,
+        0,
+        0
+      ],
+      "scale": [
+        0.18,
+        0.65,
+        0.9
+      ],
+      "color": "#496973"
+    },
+    {
+      "name": "coffee_table",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        1.1
+      ],
+      "scale": [
+        1.6,
+        "${table_height}",
+        0.65
+      ],
+      "color": "#89745f"
+    },
+    {
+      "name": "wall_back",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        -2.0
+      ],
+      "scale": [
+        6,
+        2.4,
+        0.1
+      ],
+      "color": "#b7b1a5"
+    },
+    {
+      "name": "wall_side",
+      "kind": "cube",
+      "pos": [
+        -3.0,
+        0,
+        -1.4
+      ],
+      "scale": [
+        0.1,
+        2.4,
+        1.2
+      ],
+      "color": "#a9a398"
+    }
+  ],
+  "characters": [
+    {
+      "name": "A",
+      "model": "y-bot-tpose",
+      "pos": [
+        -0.7,
+        0,
+        0
+      ],
+      "rot": 60,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@sofa_seat_a",
+            "floor": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "model": "x-bot-tpose",
+      "pos": [
+        0.7,
+        0,
+        0
+      ],
+      "rot": -60,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@sofa_seat_b",
+            "floor": 0
+          }
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "mode": "keys",
+    "keys": [
+      {
+        "frame": 0,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.05,
+          0
+        ],
+        "focalMm": 26
+      },
+      {
+        "frame": 119,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.05,
+          0
+        ],
+        "focalMm": 26
+      }
+    ]
+  },
+  "camera_variants": {
+    "wide": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.05,
+            0
+          ],
+          "focalMm": 26
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.05,
+            0
+          ],
+          "focalMm": 26
+        }
+      ]
+    },
+    "ots_a": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            2.2,
+            1.3,
+            0.65
+          ],
+          "look": [
+            -0.7,
+            1.2,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            2.2,
+            1.3,
+            0.65
+          ],
+          "look": [
+            -0.7,
+            1.2,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "ots_b": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            -2.2,
+            1.3,
+            0.65
+          ],
+          "look": [
+            0.7,
+            1.2,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            -2.2,
+            1.3,
+            0.65
+          ],
+          "look": [
+            0.7,
+            1.2,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "push_in": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.05,
+            0
+          ],
+          "focalMm": 28
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            {
+              "$expr": "camera_distance - 0.6"
+            }
+          ],
+          "look": [
+            0,
+            1.05,
+            0
+          ],
+          "focalMm": 28
+        }
+      ]
+    },
+    "track_side": {
+      "mode": "rail",
+      "points": [
+        {
+          "x": -0.65,
+          "z": 4.1
+        },
+        {
+          "x": 0.65,
+          "z": 4.1
+        }
+      ],
+      "height": 1.35,
+      "aim": [
+        "@A",
+        "@B"
+      ],
+      "aimHeight": 1.05,
+      "focalMm": 28,
+      "range": [
+        0,
+        119
+      ]
+    }
+  }
+}

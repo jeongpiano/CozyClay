@@ -1,0 +1,311 @@
+{
+  "_header": {
+    "목적": "창가에 혼자 서서 통화하는 A, 화면 나누기용 단독",
+    "실행": "사용자·콘티마법사가 cozy_preset.py apply로 적용",
+    "요청": "2026-11-08 원장·사용자 — SPEC_presets_drama.md 대화 8종 구현 (cctb-78)",
+    "연결": "presets/cozy_preset.py, cozy_clearance.py, SPEC_presets_drama.md",
+    "이력·되돌리기": "2026-11-08 Codex — 빈 창틀과 전화기 대역·귀 옆 손을 두며 단독은 35~50mm 화각을 쓴다. 사용 중지·되돌리기: 이 JSON 삭제"
+  },
+  "name": "drama_phone_single",
+  "desc": "창가에 혼자 서서 통화하는 A, 화면 나누기용 단독",
+  "frames": 120,
+  "params": {
+    "camera_distance": 3.5
+  },
+  "objects": [
+    {
+      "name": "wall_back",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        -1.6
+      ],
+      "scale": [
+        4,
+        2.4,
+        0.1
+      ],
+      "color": "#b5b8b3"
+    },
+    {
+      "name": "window_sill",
+      "kind": "cube",
+      "pos": [
+        -1.1,
+        0.85,
+        -0.8
+      ],
+      "scale": [
+        0.18,
+        0.12,
+        1.4
+      ],
+      "color": "#718b94"
+    },
+    {
+      "name": "window_post_back",
+      "kind": "cube",
+      "pos": [
+        -1.1,
+        0.97,
+        -1.45
+      ],
+      "scale": [
+        0.12,
+        1.35,
+        0.12
+      ],
+      "color": "#718b94"
+    },
+    {
+      "name": "window_post_front",
+      "kind": "cube",
+      "pos": [
+        -1.1,
+        0.97,
+        -0.15
+      ],
+      "scale": [
+        0.12,
+        1.35,
+        0.12
+      ],
+      "color": "#718b94"
+    },
+    {
+      "name": "window_lintel",
+      "kind": "cube",
+      "pos": [
+        -1.1,
+        2.25,
+        -0.8
+      ],
+      "scale": [
+        0.12,
+        0.12,
+        1.4
+      ],
+      "color": "#718b94"
+    },
+    {
+      "name": "phone",
+      "kind": "cube",
+      "pos": [
+        -0.24,
+        1.45,
+        0.05
+      ],
+      "scale": [
+        0.07,
+        0.16,
+        0.025
+      ],
+      "color": "#252933"
+    }
+  ],
+  "characters": [
+    {
+      "name": "A",
+      "model": "y-bot-tpose",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": 0,
+      "motion": [
+        {
+          "skill": "standIdle",
+          "f0": 0,
+          "args": {
+            "at": [
+              0,
+              0
+            ],
+            "heading": 0
+          }
+        },
+        {
+          "skill": "reachGrip",
+          "f0": 0,
+          "args": {
+            "anchor": "phone",
+            "side": "r",
+            "define": {
+              "kind": "world",
+              "p": [
+                -0.24,
+                1.53,
+                0.05
+              ]
+            },
+            "reach": 1,
+            "hold": 118,
+            "release": 0,
+            "orient": false
+          }
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "mode": "keys",
+    "keys": [
+      {
+        "frame": 0,
+        "pos": [
+          0,
+          1.5,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.25,
+          0
+        ],
+        "focalMm": 35
+      },
+      {
+        "frame": 119,
+        "pos": [
+          0,
+          1.5,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.25,
+          0
+        ],
+        "focalMm": 35
+      }
+    ]
+  },
+  "camera_variants": {
+    "wide": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.5,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.25,
+            0
+          ],
+          "focalMm": 35
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.5,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.25,
+            0
+          ],
+          "focalMm": 35
+        }
+      ]
+    },
+    "close_up": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0.25,
+            1.6,
+            2.0
+          ],
+          "look": [
+            0,
+            1.55,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0.25,
+            1.6,
+            2.0
+          ],
+          "look": [
+            0,
+            1.55,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "push_in": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.5,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.3,
+            0
+          ],
+          "focalMm": 35
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.5,
+            {
+              "$expr": "camera_distance - 0.6"
+            }
+          ],
+          "look": [
+            0,
+            1.3,
+            0
+          ],
+          "focalMm": 35
+        }
+      ]
+    },
+    "track_side": {
+      "mode": "rail",
+      "points": [
+        {
+          "x": -0.4,
+          "z": 3.2
+        },
+        {
+          "x": 0.4,
+          "z": 3.2
+        }
+      ],
+      "height": 1.5,
+      "aim": [
+        "@A"
+      ],
+      "aimHeight": 1.3,
+      "focalMm": 35,
+      "range": [
+        0,
+        119
+      ]
+    }
+  }
+}

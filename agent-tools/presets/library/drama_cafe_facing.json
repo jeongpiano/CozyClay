@@ -1,0 +1,354 @@
+{
+  "_header": {
+    "목적": "카페 작은 원탁에 마주 앉은 2인, 뒤 카운터와 벽",
+    "실행": "사용자·콘티마법사가 cozy_preset.py apply로 적용",
+    "요청": "2026-11-08 원장·사용자 — SPEC_presets_drama.md 대화 8종 구현 (cctb-78)",
+    "연결": "presets/cozy_preset.py, cozy_clearance.py, SPEC_presets_drama.md",
+    "이력·되돌리기": "2026-11-08 Codex — 원탁·카운터 뒤 벽과 촬영 쪽의 열린 공간을 유지한다. 사용 중지·되돌리기: 이 JSON 삭제"
+  },
+  "name": "drama_cafe_facing",
+  "desc": "카페 작은 원탁에 마주 앉은 2인, 뒤 카운터와 벽",
+  "frames": 120,
+  "params": {
+    "table_height": 0.75,
+    "seat_height": 0.45,
+    "camera_distance": 4.2
+  },
+  "objects": [
+    {
+      "name": "table",
+      "kind": "cylinder",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.0,
+        "${table_height}",
+        1.0
+      ],
+      "color": "#89745f"
+    },
+    {
+      "name": "counter",
+      "kind": "cube",
+      "pos": [
+        1.1,
+        0,
+        -1.7
+      ],
+      "scale": [
+        2.2,
+        1.05,
+        0.55
+      ],
+      "color": "#624f40"
+    },
+    {
+      "name": "chair_a",
+      "kind": "cube",
+      "pos": [
+        -1.05,
+        0,
+        0
+      ],
+      "scale": [
+        0.55,
+        "${seat_height}",
+        0.55
+      ],
+      "color": "#89745f",
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "name": "chair_b",
+      "kind": "cube",
+      "pos": [
+        1.05,
+        0,
+        0
+      ],
+      "scale": [
+        0.55,
+        "${seat_height}",
+        0.55
+      ],
+      "color": "#89745f",
+      "rot": [
+        0,
+        -90,
+        0
+      ]
+    },
+    {
+      "name": "wall_back",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        -2.4
+      ],
+      "scale": [
+        6,
+        2.4,
+        0.1
+      ],
+      "color": "#b7b1a5"
+    },
+    {
+      "name": "wall_side",
+      "kind": "cube",
+      "pos": [
+        -3.0,
+        0,
+        -1.7999999999999998
+      ],
+      "scale": [
+        0.1,
+        2.4,
+        1.2
+      ],
+      "color": "#a9a398"
+    }
+  ],
+  "characters": [
+    {
+      "name": "A",
+      "model": "y-bot-tpose",
+      "pos": [
+        -1.05,
+        0,
+        0
+      ],
+      "rot": 90,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@chair_a",
+            "floor": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "model": "x-bot-tpose",
+      "pos": [
+        1.05,
+        0,
+        0
+      ],
+      "rot": -90,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@chair_b",
+            "floor": 0
+          }
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "mode": "keys",
+    "keys": [
+      {
+        "frame": 0,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.1,
+          0
+        ],
+        "focalMm": 26
+      },
+      {
+        "frame": 119,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.1,
+          0
+        ],
+        "focalMm": 26
+      }
+    ]
+  },
+  "camera_variants": {
+    "wide": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 26
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 26
+        }
+      ]
+    },
+    "ots_a": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            -1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            -1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "ots_b": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            -2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            -2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "push_in": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 28
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            {
+              "$expr": "camera_distance - 0.6"
+            }
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 28
+        }
+      ]
+    },
+    "track_side": {
+      "mode": "rail",
+      "points": [
+        {
+          "x": -0.65,
+          "z": 4.0
+        },
+        {
+          "x": 0.65,
+          "z": 4.0
+        }
+      ],
+      "height": 1.35,
+      "aim": [
+        "@A",
+        "@B"
+      ],
+      "aimHeight": 1.1,
+      "focalMm": 28,
+      "range": [
+        0,
+        119
+      ]
+    }
+  }
+}

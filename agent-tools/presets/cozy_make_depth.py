@@ -208,6 +208,15 @@ def make(args):
                 'preview': args.preview if args.preview and os.path.isfile(args.preview) else None}
         if unresolved:
             result['depth_loop_unresolved'] = unresolved
+        # 2026-11-08 cctb-78 원장 #33152·#33166 → #33172 "512로 바꾸자"(ec 최소 해상도 시험: 368 틈 못 들어감, 512 = 736 과 같은 경로, 시간 0.75배):
+        #   렌더용 회색 참조는 512×288·24fps 정속이 기본 → 미리보기 옆에 <이름>_ref.mp4 를 만들고 결과 키 grey_ref(크기 중립 이름). 크기는 COZY_GREY_REF_W 로 바꿀 수 있음
+        if result['preview']:
+            w = int(os.environ.get('COZY_GREY_REF_W', '512')); h = round(w * 9 / 16 / 2) * 2
+            grey = str(Path(result['preview']).with_name(Path(result['preview']).stem + '_ref.mp4'))
+            made = subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', result['preview'], '-vf', f'scale={w}:{h},fps=24', '-an',
+                                   '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', grey], capture_output=True)
+            result['grey_ref'] = grey if made.returncode == 0 and os.path.isfile(grey) else None
+            result['grey_ref_size'] = [w, h]
         return result
     finally:
         part.unlink(missing_ok=True)

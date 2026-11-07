@@ -1,0 +1,339 @@
+{
+  "_header": {
+    "목적": "식탁에 마주 앉은 A·B와 식탁·의자 2개",
+    "실행": "사용자·콘티마법사가 cozy_preset.py apply로 적용",
+    "요청": "2026-11-08 원장·사용자 — SPEC_presets_drama.md 대화 8종 구현 (cctb-78)",
+    "연결": "presets/cozy_preset.py, cozy_clearance.py, SPEC_presets_drama.md",
+    "이력·되돌리기": "2026-11-08 Codex — 대화선 z=0의 +Z 쪽만 촬영한다. 사용 중지·되돌리기: 이 JSON 삭제"
+  },
+  "name": "drama_table_facing",
+  "desc": "식탁에 마주 앉은 A·B와 식탁·의자 2개",
+  "frames": 120,
+  "params": {
+    "table_height": 0.75,
+    "seat_height": 0.45,
+    "camera_distance": 4.5
+  },
+  "objects": [
+    {
+      "name": "table",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.35,
+        "${table_height}",
+        1.15
+      ],
+      "color": "#89745f"
+    },
+    {
+      "name": "chair_a",
+      "kind": "cube",
+      "pos": [
+        -1.05,
+        0,
+        0
+      ],
+      "scale": [
+        0.55,
+        "${seat_height}",
+        0.55
+      ],
+      "color": "#89745f",
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "name": "chair_b",
+      "kind": "cube",
+      "pos": [
+        1.05,
+        0,
+        0
+      ],
+      "scale": [
+        0.55,
+        "${seat_height}",
+        0.55
+      ],
+      "color": "#89745f",
+      "rot": [
+        0,
+        -90,
+        0
+      ]
+    },
+    {
+      "name": "wall_back",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        -2
+      ],
+      "scale": [
+        6,
+        2.4,
+        0.1
+      ],
+      "color": "#b7b1a5"
+    },
+    {
+      "name": "wall_side",
+      "kind": "cube",
+      "pos": [
+        -3.0,
+        0,
+        -1.4
+      ],
+      "scale": [
+        0.1,
+        2.4,
+        1.2
+      ],
+      "color": "#a9a398"
+    }
+  ],
+  "characters": [
+    {
+      "name": "A",
+      "model": "y-bot-tpose",
+      "pos": [
+        -1.05,
+        0,
+        0
+      ],
+      "rot": 90,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@chair_a",
+            "floor": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "model": "x-bot-tpose",
+      "pos": [
+        1.05,
+        0,
+        0
+      ],
+      "rot": -90,
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@chair_b",
+            "floor": 0
+          }
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "mode": "keys",
+    "keys": [
+      {
+        "frame": 0,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.1,
+          0
+        ],
+        "focalMm": 26
+      },
+      {
+        "frame": 119,
+        "pos": [
+          0,
+          1.35,
+          "${camera_distance}"
+        ],
+        "look": [
+          0,
+          1.1,
+          0
+        ],
+        "focalMm": 26
+      }
+    ]
+  },
+  "camera_variants": {
+    "wide": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 26
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 26
+        }
+      ]
+    },
+    "ots_a": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            -1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            -1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "ots_b": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            -2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        },
+        {
+          "frame": 119,
+          "pos": [
+            -2.4,
+            1.35,
+            0.65
+          ],
+          "look": [
+            1.05,
+            1.2200000000000002,
+            0
+          ],
+          "focalMm": 50
+        }
+      ]
+    },
+    "push_in": {
+      "mode": "keys",
+      "keys": [
+        {
+          "frame": 0,
+          "pos": [
+            0,
+            1.35,
+            "${camera_distance}"
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 28
+        },
+        {
+          "frame": 119,
+          "pos": [
+            0,
+            1.35,
+            {
+              "$expr": "camera_distance - 0.6"
+            }
+          ],
+          "look": [
+            0,
+            1.1,
+            0
+          ],
+          "focalMm": 28
+        }
+      ]
+    },
+    "track_side": {
+      "mode": "rail",
+      "points": [
+        {
+          "x": -0.65,
+          "z": 4.3
+        },
+        {
+          "x": 0.65,
+          "z": 4.3
+        }
+      ],
+      "height": 1.35,
+      "aim": [
+        "@A",
+        "@B"
+      ],
+      "aimHeight": 1.1,
+      "focalMm": 28,
+      "range": [
+        0,
+        119
+      ]
+    }
+  }
+}
