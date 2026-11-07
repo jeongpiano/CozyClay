@@ -1,0 +1,80 @@
+{
+  "_header": {
+    "목적": "예제 장면을 재사용할 프리셋",
+    "실행": "사용자가 cozy_preset.py로 불러온다",
+    "요청": "2026-11-06 사용자, 장면 재사용 (1106-db2473)",
+    "연결": "presets/cozy_preset.py 및 로컬 CozyClay",
+    "이력·되돌리기": "사용 중지 시 이 JSON 파일 삭제"
+  },
+  "name": "seated_side_rail",
+  "desc": "의자에 앉은 인물과 옆을 따라 오르는 카메라 레일",
+  "frames": 120,
+  "params": {
+    "seat_z": 0.0,
+    "rail_distance": 2.5
+  },
+  "objects": [
+    {
+      "name": "chair",
+      "kind": "cube",
+      "pos": [
+        0,
+        0,
+        "${seat_z}"
+      ],
+      "scale": [
+        0.6,
+        0.45,
+        0.6
+      ],
+      "color": "#806957"
+    }
+  ],
+  "characters": [
+    {
+      "name": "her",
+      "model": "y-bot-tpose",
+      "motion": [
+        {
+          "skill": "sitInSeat",
+          "f0": 0,
+          "args": {
+            "seat": "@chair"
+          }
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "mode": "rail",
+    "points": [
+      {
+        "x": "${rail_distance}",
+        "z": -1.5
+      },
+      {
+        "x": "${rail_distance}",
+        "z": 1.5
+      }
+    ],
+    "height": [
+      {
+        "t": 0,
+        "height": 1.0
+      },
+      {
+        "t": 1,
+        "height": 2.0
+      }
+    ],
+    "aim": [
+      "@her"
+    ],
+    "aimHeight": 1.0,
+    "focalMm": 35,
+    "range": [
+      0,
+      119
+    ]
+  }
+}

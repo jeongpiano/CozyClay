@@ -1,0 +1,250 @@
+{
+ "_header": {
+  "목적": "원장 #32111·#32112 호리존·전철 5070 시험 장면",
+  "실행": "t10 이 cozy_make_depth.py --spec 으로",
+  "요청": "2026-11-07 원장 → cctb-44 1106-982d4a, t10 이 깊이 담당",
+  "연결": "presets/cozy_make_depth.py",
+  "이력·되돌리기": "itest_51_t10_cyc_subway 씬1·2 로 5070 DenoMix 0.3MP 통과(원장 #32185 완전 굿). 깊이 검정 피하려고 하늘 한 조각 남김 — 막지 말 것"
+ },
+ "name": "cyc_studio_lineup",
+ "desc": "흰 호리존 스튜디오(뒷벽+곡면 6단, 높이 3.6m로 위쪽 하늘 남김)·인물 5 일렬·차 블록, 천천히 밀기 — 2026-11-07 원장 \"완전 굿\"",
+ "frames": 120,
+ "params": {},
+ "objects": [
+  {
+   "name": "wall_back",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -6.1
+   ],
+   "scale": [
+    16,
+    3.6,
+    0.2
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove0",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -5.833333333333333
+   ],
+   "scale": [
+    16,
+    1.201,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove1",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -5.5
+   ],
+   "scale": [
+    16,
+    0.677,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove2",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -5.166666666666667
+   ],
+   "scale": [
+    16,
+    0.376,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove3",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -4.833333333333334
+   ],
+   "scale": [
+    16,
+    0.182,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove4",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -4.5
+   ],
+   "scale": [
+    16,
+    0.064,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "cove5",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -4.166666666666666
+   ],
+   "scale": [
+    16,
+    0.007,
+    0.333
+   ],
+   "color": "#e8e8e8"
+  },
+  {
+   "name": "car",
+   "kind": "cube",
+   "pos": [
+    3.2,
+    0,
+    -1.2
+   ],
+   "scale": [
+    1.8,
+    1.4,
+    4.2
+   ],
+   "color": "#6fc7b5"
+  }
+ ],
+ "characters": [
+  {
+   "name": "p0",
+   "model": "x-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       -3,
+       -1.0
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "p1",
+   "model": "y-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       -1.8,
+       -1.8
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "p2",
+   "model": "x-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       -0.6,
+       -0.8
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "p3",
+   "model": "y-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       0.6,
+       -1.6
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "p4",
+   "model": "x-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       1.6,
+       -0.6
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "camera": {
+  "mode": "keys",
+  "keys": [
+   {
+    "frame": 0,
+    "pos": [
+     0,
+     1.6,
+     7.5
+    ],
+    "look": [
+     0,
+     1.1,
+     -2
+    ],
+    "focalMm": 32
+   },
+   {
+    "frame": 119,
+    "pos": [
+     0,
+     1.5,
+     5.0
+    ],
+    "look": [
+     0,
+     1.1,
+     -2
+    ],
+    "focalMm": 32
+   }
+  ]
+ }
+}

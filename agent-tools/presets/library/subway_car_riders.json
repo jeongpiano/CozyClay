@@ -1,0 +1,287 @@
+{
+ "_header": {
+  "목적": "원장 #32111·#32112 호리존·전철 5070 시험 장면",
+  "실행": "t10 이 cozy_make_depth.py --spec 으로",
+  "요청": "2026-11-07 원장 → cctb-44 1106-982d4a, t10 이 깊이 담당",
+  "연결": "presets/cozy_make_depth.py",
+  "이력·되돌리기": "itest_51_t10_cyc_subway 씬1·2 로 5070 DenoMix 0.3MP 통과(원장 #32185 완전 굿). 깊이 검정 피하려고 하늘 한 조각 남김 — 막지 말 것"
+ },
+ "name": "subway_car_riders",
+ "desc": "전철 칸(노란 벽·파란 의자·하늘색 창 없음·은색 기둥, 끝 벽 열어 둠)·승객 3(앉음 2·섬 1), 통로 따라 전진 — 2026-11-07 원장 \"완전 굿\"",
+ "frames": 120,
+ "params": {},
+ "objects": [
+  {
+   "name": "floor",
+   "kind": "cube",
+   "pos": [
+    0,
+    0,
+    -4.0
+   ],
+   "scale": [
+    3,
+    0.05,
+    8.0
+   ],
+   "color": "#7a6a3a"
+  },
+  {
+   "name": "wall_l",
+   "kind": "cube",
+   "pos": [
+    -1.5,
+    0,
+    -4.0
+   ],
+   "scale": [
+    0.1,
+    2.5,
+    8.0
+   ],
+   "color": "#c9b23a"
+  },
+  {
+   "name": "wall_r",
+   "kind": "cube",
+   "pos": [
+    1.5,
+    0,
+    -4.0
+   ],
+   "scale": [
+    0.1,
+    2.5,
+    8.0
+   ],
+   "color": "#c9b23a"
+  },
+  {
+   "name": "ceiling",
+   "kind": "cube",
+   "pos": [
+    0,
+    2.5,
+    -4.0
+   ],
+   "scale": [
+    3,
+    0.08,
+    8.0
+   ],
+   "color": "#d8d0a0"
+  },
+  {
+   "name": "seat_l0",
+   "kind": "cube",
+   "pos": [
+    -1.15,
+    0,
+    -1.6
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "seat_r0",
+   "kind": "cube",
+   "pos": [
+    1.15,
+    0,
+    -1.6
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "pole0",
+   "kind": "cylinder",
+   "pos": [
+    0.35,
+    0,
+    -2.8
+   ],
+   "scale": [
+    0.05,
+    2.5,
+    0.05
+   ],
+   "color": "#d0d0d0"
+  },
+  {
+   "name": "seat_l1",
+   "kind": "cube",
+   "pos": [
+    -1.15,
+    0,
+    -4.0
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "seat_r1",
+   "kind": "cube",
+   "pos": [
+    1.15,
+    0,
+    -4.0
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "pole1",
+   "kind": "cylinder",
+   "pos": [
+    0.35,
+    0,
+    -5.2
+   ],
+   "scale": [
+    0.05,
+    2.5,
+    0.05
+   ],
+   "color": "#d0d0d0"
+  },
+  {
+   "name": "seat_l2",
+   "kind": "cube",
+   "pos": [
+    -1.15,
+    0,
+    -6.4
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "seat_r2",
+   "kind": "cube",
+   "pos": [
+    1.15,
+    0,
+    -6.4
+   ],
+   "scale": [
+    0.6,
+    0.45,
+    1.9
+   ],
+   "color": "#2c5fd6"
+  },
+  {
+   "name": "pole2",
+   "kind": "cylinder",
+   "pos": [
+    0.35,
+    0,
+    -7.6000000000000005
+   ],
+   "scale": [
+    0.05,
+    2.5,
+    0.05
+   ],
+   "color": "#d0d0d0"
+  }
+ ],
+ "characters": [
+  {
+   "name": "rider_a",
+   "model": "x-bot-tpose",
+   "motion": [
+    {
+     "skill": "sitInSeat",
+     "f0": 0,
+     "args": {
+      "seat": "@seat_l0"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rider_b",
+   "model": "y-bot-tpose",
+   "motion": [
+    {
+     "skill": "sitInSeat",
+     "f0": 0,
+     "args": {
+      "seat": "@seat_r1"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rider_c",
+   "model": "x-bot-tpose",
+   "motion": [
+    {
+     "skill": "standIdle",
+     "f0": 0,
+     "args": {
+      "at": [
+       -0.3,
+       -4.3
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "camera": {
+  "mode": "keys",
+  "keys": [
+   {
+    "frame": 0,
+    "pos": [
+     0,
+     1.45,
+     0.6
+    ],
+    "look": [
+     0,
+     1.2,
+     -6
+    ],
+    "focalMm": 24
+   },
+   {
+    "frame": 119,
+    "pos": [
+     0,
+     1.45,
+     -0.8
+    ],
+    "look": [
+     0,
+     1.2,
+     -6
+    ],
+    "focalMm": 24
+   }
+  ]
+ }
+}
