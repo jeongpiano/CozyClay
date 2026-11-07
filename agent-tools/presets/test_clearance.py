@@ -273,6 +273,108 @@ class SceneTests(unittest.TestCase):
             self.assertEqual(source.read_bytes(), saved)
 
 
+# 2026-11-07 Codex — 실제 인형 대신 합성 깊이를 써서 편집기 없이 뒷면 컬링 신호를 재현한다.
+class DepthLoopTests(unittest.TestCase):
+    def test_depth_problems_synthetic_mp4(self):
+        with tempfile.TemporaryDirectory() as folder:
+            video = Path(folder) / 'synthetic.mp4'
+            pixels = np.zeros((30, 52, 92), dtype=np.uint8)
+            pixels[10:20, :, :37] = 255  # About 40% near, then an abrupt disappearance.
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'gray',
+                            '-s', '92x52', '-r', '24', '-i', 'pipe:0', '-an', '-c:v', 'libx264',
+                            '-crf', '0', '-pix_fmt', 'yuv444p', str(video)],
+                           input=pixels.tobytes(), capture_output=True, check=True)
+            self.assertEqual(c.depth_problems(str(video)), list(range(8, 20)))
+
+    def test_depth_thresholds_and_lookahead_boundaries(self):
+        pixels = np.zeros((30, 52 * 92), dtype=np.uint8)
+        pixels[10:20, :1000] = 255  # Enter but not close: only the drop should trigger.
+        with patch.object(c.subprocess, 'run', return_value=SimpleNamespace(stdout=pixels.tobytes())):
+            self.assertEqual(c.depth_problems('mock.mp4'), list(range(8, 20)))
+        pixels[:] = 235  # The near threshold is strictly greater, not greater-or-equal.
+        with patch.object(c.subprocess, 'run', return_value=SimpleNamespace(stdout=pixels.tobytes())):
+            self.assertEqual(c.depth_problems('mock.mp4'), [])
+        pixels[:, :1500] = 255  # Persistent close frames need no following drop.
+        with patch.object(c.subprocess, 'run', return_value=SimpleNamespace(stdout=pixels.tobytes())):
+            self.assertEqual(c.depth_problems('mock.mp4'), list(range(30)))
+
+    def test_depth_decode_failure_is_not_silently_clear(self):
+        for output in (b'', b'partial frame'):
+            with patch.object(c.subprocess, 'run', return_value=SimpleNamespace(stdout=output)):
+                with self.assertRaises(ValueError):
+                    c.depth_problems('mock.mp4')
+
+    def test_aim_path_follows_distance_and_stops(self):
+        target = dict(name='target', pos=[9, 9, 9], path=dict(
+            points=[dict(x=0, y=1, z=0), dict(x=1, y=1, z=0), dict(x=1, y=1, z=2)], speed=2))
+        spec = simple(objects=[target], frames=49)
+        spec['camera']['aim'] = ['@target']
+        aim = c.aim_path(spec)
+        np.testing.assert_allclose(aim[[0, 6, 12, 24, 36, 48]],
+                                   [[0, 1, 0], [.5, 1, 0], [1, 1, 0], [1, 1, 1], [1, 1, 2], [1, 1, 2]])
+        target['path']['points'].insert(0, dict(x=0, y=1, z=0))
+        np.testing.assert_allclose(c.aim_path(spec), aim)
+
+    def test_aim_fixed_object_and_centroid_fallback(self):
+        spec = simple(objects=[dict(name='target', pos=[1, 2, 3])])
+        for aim in (['@target'], [1, 2, 3], dict(x=1, y=2, z=3)):
+            spec['camera']['aim'] = aim
+            np.testing.assert_allclose(c.aim_path(spec), np.tile([1, 2, 3], (49, 1)))
+        for aim in (None, ['@missing']):
+            spec['camera']['aim'] = aim
+            np.testing.assert_allclose(c.aim_path(spec), np.tile(c.camera_path(spec).mean(axis=0), (49, 1)))
+
+    def test_push_back_increases_distance_and_has_local_tails(self):
+        spec = simple(dict(mode='rail', points=[dict(x=-10, z=2), dict(x=10, z=2)],
+                           height=1., aim=[0, 1, 0], focalMm=35), frames=241)
+        original = copy.deepcopy(spec)
+        problems = list(range(112, 129))
+        fixed, report = c.push_back(spec, problems + [120])
+        before, after, aim = c.camera_path(spec), c.camera_path(fixed), c.aim_path(spec)
+        self.assertTrue((np.linalg.norm(after - aim, axis=1)[problems] >
+                         np.linalg.norm(before - aim, axis=1)[problems]).all())
+        # Gaussian support is ±3σ from each problem; rail arc-length resampling adds small drift.
+        outside = (np.arange(241) < 112 - 3 * .35 * 24) | (np.arange(241) > 128 + 3 * .35 * 24)
+        self.assertLess(np.linalg.norm(after - before, axis=1)[outside].max(), .01)
+        self.assertEqual(spec, original)
+        self.assertEqual(report['frames'], len(problems))
+        self.assertEqual(report['windows'], [[round(112 / 24, 6), round(128 / 24, 6)]])
+        self.assertAlmostEqual(report['max_push_m'], np.linalg.norm(after - before, axis=1).max())
+        self.assertEqual(fixed['camera']['aim'], spec['camera']['aim'])
+        self.assertEqual(fixed['camera']['focalMm'], 35)
+
+    def test_push_back_keys_only_positions_and_vertical_weight(self):
+        # 2026-11-07 cctb-44: 기본 미는 방향이 radial 로 바뀜 — 이 시험은 예전 view 방식(y 0.5배)을 검사
+        import os
+        os.environ['COZY_PUSH_MODE'] = 'view'
+        self.addCleanup(os.environ.pop, 'COZY_PUSH_MODE', None)
+        spec = simple(dict(mode='keys', aim=[0, 0, 0], keys=[
+            dict(frame=0, pos=[1, 1, 0], look=[0, 0, 0]),
+            dict(frame=24, pos=dict(x=1, y=1, z=0), focalMm=35),
+            dict(frame=48, pos=[1, 1, 0])]))
+        fixed, report = c.push_back(spec, [24])
+        delta = c.vec(fixed['camera']['keys'][1]['pos']) - [1, 1, 0]
+        self.assertAlmostEqual(np.linalg.norm(delta), .12)
+        self.assertAlmostEqual(delta[1] / delta[0], .5)
+        self.assertGreater(report['max_push_m'], 0)
+        self.assertIsInstance(fixed['camera']['keys'][1]['pos'], dict)
+        for before, after in zip(spec['camera']['keys'], fixed['camera']['keys']):
+            self.assertEqual({k: v for k, v in before.items() if k != 'pos'},
+                             {k: v for k, v in after.items() if k != 'pos'})
+        self.assertEqual(len(fixed['camera']['keys']), 3)
+
+    def test_push_back_empty_short_and_invalid_frames(self):
+        spec = simple(frames=1)
+        fixed, report = c.push_back(spec, [])
+        self.assertEqual(fixed, spec)
+        self.assertEqual(report, dict(frames=0, windows=[], max_push_m=0.))
+        fixed, report = c.push_back(spec, [0])
+        self.assertTrue(np.isfinite(c.camera_path(fixed)).all())
+        for frames in ([-1], [1], [.5]):
+            with self.assertRaises(ValueError):
+                c.push_back(spec, frames)
+
+
 class IntegrationTests(unittest.TestCase):
     def test_parameterized_preset_and_overrides(self):
         spec = depth.cozy_preset.load('seated_side_rail')
@@ -292,11 +394,18 @@ class IntegrationTests(unittest.TestCase):
             fixed, report = depth.clearance_spec(spec, {}, True)
         self.assertIs(fixed, spec); self.assertFalse(report['enabled'])
 
-    def fake_make(self, folder, *, disabled=False, source='MQ_S1w5', black=False):
+    # 2026-11-07 Codex — 기존 모의 MP4를 디코더에 넘기지 않고 반복 결과만 명시적으로 제어한다.
+    def fake_make(self, folder, *, disabled=False, source='MQ_S1w5', black=False,
+                  detections=None, rounds=None, spec_override=None, seconds=15.):
         folder = Path(folder)
-        args = SimpleNamespace(seconds=15., fps=24, out=str(folder / 'depth.mp4'), params='{}', preset=None,
+        args = SimpleNamespace(seconds=seconds, fps=24, out=str(folder / 'depth.mp4'), params='{}', preset=None,
                                spec=str(SCENES / (source + '_spec.json')), aim_per_frame=True,
                                no_clearance=disabled, width=640, height=360, preview=str(folder / 'preview.mp4'))
+        if rounds is not None:
+            args.depth_loop = rounds
+        if spec_override is not None:
+            args.spec = str(folder / 'source.json')
+            Path(args.spec).write_text(json.dumps(spec_override))
         playwright = MagicMock(); browser = playwright.chromium.launch.return_value
         page = browser.new_page.return_value
         download = page.expect_download.return_value.__enter__.return_value
@@ -307,6 +416,7 @@ class IntegrationTests(unittest.TestCase):
              patch.object(depth.cozy_preset, 'apply') as apply, \
              patch.object(depth, 'status', side_effect=[dict(editors=[]), dict(editors=[dict(handle='mock-editor')])]), \
              patch.object(depth, 'probe', return_value=(360, 640, 360)), \
+             patch.object(c, 'depth_problems', side_effect=detections if detections is not None else [[]]) as detect, \
              patch.object(depth.subprocess, 'run', return_value=SimpleNamespace(stdout='YMAX=0' if black else 'YMAX=200')):
             if black:
                 with self.assertRaisesRegex(RuntimeError, '전부 검정'):
@@ -317,7 +427,15 @@ class IntegrationTests(unittest.TestCase):
                 result = depth.make(args)
             applied = apply.call_args.args[0]
             self.assertEqual(apply.call_args.kwargs['workspace'], 'mock-editor')
-            self.assertEqual(apply.call_args.kwargs['frames'], 360)
+            self.assertEqual(apply.call_args.kwargs['frames'], round(seconds * 24))
+            if not black:
+                self.assertEqual(apply.call_count, len(result['clearance']['depth_loop']) + 1)
+                if disabled or (applied['camera'].get('passThrough') or {}).get('body'):
+                    detect.assert_not_called()
+                else:
+                    self.assertEqual(detect.call_count, apply.call_count)
+                self.assertEqual(page.expect_download.call_count, 2 * apply.call_count)
+                browser.new_page.assert_called_once()
             browser.close.assert_called_once()
         return result, applied
 
@@ -342,6 +460,49 @@ class IntegrationTests(unittest.TestCase):
     def test_black_depth_check_remains_effective(self):
         with tempfile.TemporaryDirectory() as folder:
             self.fake_make(folder, black=True)
+
+    # 2026-11-07 Codex — 마지막 깊이·미리보기·저장 spec이 모두 같은 보정 회차인지 검증한다.
+    def test_depth_loop_resolves_and_overwrites_fixed_spec(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result, applied = self.fake_make(folder, source='MQ_S1w6', detections=[[150, 151], [152], []])
+            rounds = result['clearance']['depth_loop']
+            self.assertEqual([r['round'] for r in rounds], [1, 2])
+            self.assertEqual([r['problems'] for r in rounds], [2, 1])
+            self.assertEqual(rounds[0]['windows'], [[6.25, round(151 / 24, 6)]])
+            self.assertTrue(all(r['max_push_m'] > 0 for r in rounds))
+            self.assertNotIn('depth_loop_unresolved', result)
+            self.assertEqual(json.loads((Path(folder) / 'depth_spec_fixed.json').read_text()), applied)
+
+    def test_depth_loop_default_three_rounds_reports_remaining_seconds(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result, applied = self.fake_make(folder, detections=[[150], [150], [150], [151, 152]])
+            self.assertEqual(len(result['clearance']['depth_loop']), 3)
+            self.assertEqual(result['depth_loop_unresolved'], [round(151 / 24, 6), round(152 / 24, 6)])
+            self.assertEqual(json.loads((Path(folder) / 'depth_spec_fixed.json').read_text()), applied)
+
+    def test_depth_loop_zero_only_checks_and_custom_limit(self):
+        for limit in (0, 1):
+            with self.subTest(limit=limit), tempfile.TemporaryDirectory() as folder:
+                result, applied = self.fake_make(folder, rounds=limit, detections=[[150]] * (limit + 1))
+                self.assertEqual(len(result['clearance']['depth_loop']), limit)
+                self.assertEqual(result['depth_loop_unresolved'], [6.25])
+
+    def test_depth_loop_skips_body_passthrough(self):
+        spec = scene('MQ_S1w5')
+        spec['camera']['passThrough'] = dict(body=True, objects=False)
+        with tempfile.TemporaryDirectory() as folder:
+            result, applied = self.fake_make(folder, spec_override=spec, detections=[])
+            self.assertEqual(result['clearance']['depth_loop'], [])
+            self.assertNotIn('depth_loop_unresolved', result)
+
+    def test_depth_loop_matches_export_duration(self):
+        spec = simple(dict(mode='rail', points=[dict(x=-2, z=2), dict(x=2, z=2)],
+                           height=1, range=[0, 48], aim=[0, 1, 0]), frames=49)
+        with tempfile.TemporaryDirectory() as folder:
+            result, applied = self.fake_make(folder, spec_override=spec, seconds=4., detections=[[80], []])
+            self.assertEqual(applied['frames'], 96)
+            self.assertEqual(applied['camera']['range'], [0, 95])
+            self.assertEqual(result['clearance']['depth_loop'][0]['windows'], [[round(80 / 24, 6)] * 2])
 
 
 if __name__ == '__main__':

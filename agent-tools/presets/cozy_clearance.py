@@ -13,7 +13,9 @@ import argparse
 import copy
 import json
 import math
+import os
 from pathlib import Path
+import subprocess
 import sys
 
 import numpy as np
@@ -242,6 +244,108 @@ def camera_path(spec, at=None):
     if not np.isfinite(result).all():
         raise ValueError('카메라 위치는 유한해야 합니다')
     return result
+
+
+# 2026-11-07 Codex — 캡슐 근사와 다른 실제 표면은 렌더된 깊이와 실제 겨냥 경로로 보정한다.
+def aim_path(spec):
+    """Sample a fixed aim or a named object's metre-per-second path at 24 fps."""
+    positions = camera_path(spec)
+    aim = spec['camera'].get('aim')
+    if isinstance(aim, list) and len(aim) == 1 and isinstance(aim[0], str) and aim[0].startswith('@'):
+        target = next((obj for obj in spec.get('objects', []) if obj.get('name') == aim[0][1:]), None)
+        if target is not None:
+            path = target.get('path') or {}
+            points = path.get('points') or []
+            if points:
+                points = np.array([vec(point) for point in points])
+                lengths = arc(points)
+                speed = float(path.get('speed', 0.))
+                if not math.isfinite(speed) or speed < 0:
+                    raise ValueError('path.speed는 유한한 음이 아닌 값이어야 합니다')
+                travelled = np.minimum(speed * np.arange(len(positions)) / FPS, lengths[-1])
+                # Repeated points add no distance; retaining the last one keeps interpolation defined.
+                keep = np.r_[np.diff(lengths) > EPS, True]
+                return np.column_stack([np.interp(travelled, lengths[keep], points[keep, i]) for i in range(3)])
+            if 'pos' in target:
+                return np.tile(vec(target['pos']), (len(positions), 1))
+    elif isinstance(aim, dict) or isinstance(aim, (list, tuple)) and len(aim) == 3:
+        return np.tile(vec(aim), (len(positions), 1))
+    return np.tile(positions.mean(axis=0), (len(positions), 1))
+
+
+# 2026-11-07 Codex — 가까운 면이 사라지는 뒷면 컬링 신호를 저해상도 실측으로 찾는다.
+def depth_problems(depth_mp4: str, fps=24, near_level=235, enter=.15, leave=.02, close=.30) -> list[int]:
+    if not math.isfinite(fps) or fps <= 0:
+        raise ValueError('fps는 유한한 양수여야 합니다')
+    decoded = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(depth_mp4),
+                              '-vf', f'fps={fps},scale=92:52', '-pix_fmt', 'gray',
+                              '-f', 'rawvideo', 'pipe:1'], capture_output=True, check=True)
+    pixels = np.frombuffer(decoded.stdout, dtype=np.uint8)
+    if not pixels.size or pixels.size % (92 * 52):
+        raise ValueError('깊이 영상을 완전한 92×52 프레임으로 읽지 못했습니다')
+    near = (pixels.reshape(-1, 92 * 52) > near_level).mean(axis=1)
+    problems = near >= close
+    lookahead = max(1, round(.25 * fps))
+    for frame in np.flatnonzero(near >= enter):
+        if (near[frame + 1:frame + lookahead + 1] <= leave).any():
+            problems[max(0, frame - lookahead):frame + 1] = True
+    return np.flatnonzero(problems).tolist()
+
+
+# 2026-11-07 Codex — 시선 반대로 물러서면 몸 근사가 놓친 면에서도 겨냥점을 유지할 수 있다.
+def _body_center(spec, positions):
+    """2026-11-07 cctb-44: 바깥으로 밀 기준점 — 첫 인물이 sitInSeat 면 그 의자 중심, 아니면 인물 위치, 없으면 카메라 경로 무게중심."""
+    objects = {o.get('name'): o for o in spec.get('objects', [])}
+    for c in spec.get('characters', []):
+        for m in c.get('motion', []) or []:
+            seat = str(((m.get('args') or {}).get('seat')) or '')
+            if m.get('skill') == 'sitInSeat' and seat.startswith('@') and seat[1:] in objects:
+                return vec(objects[seat[1:]]['pos'])
+        if c.get('pos') is not None:
+            return vec(c['pos'])
+    return positions.mean(axis=0)
+
+
+def push_back(spec, frames: list[int], amount=.12):
+    result = copy.deepcopy(spec)
+    positions = camera_path(spec)
+    mask = np.zeros(len(positions), dtype=bool)
+    if not math.isfinite(amount) or amount < 0:
+        raise ValueError('amount는 유한한 음이 아닌 값이어야 합니다')
+    for frame in frames:
+        if not isinstance(frame, (int, np.integer)) or not 0 <= frame < len(positions):
+            raise ValueError('문제 frame은 spec 프레임 범위 안의 정수여야 합니다')
+        mask[frame] = True
+    report = dict(frames=int(mask.sum()), windows=[[round(lo / FPS, 6), round(hi / FPS, 6)]
+                                                  for lo, hi in intervals(mask)], max_push_m=0.)
+    if not mask.any() or amount == 0:
+        return result, report
+    # 2026-11-07 cctb-44 원장 #32899 실측: '바라보는 방향 반대로 물리기'는 허벅지 위를 미끄러지는 길에서 뚫는 곳을 앞으로 옮기기만 함(6.1→5.6→5.3→5.0초)
+    #   → 기본은 인물 중심(앉았으면 의자 중심)에서 카메라 쪽 '수평 바깥 + 약간 위(0.35)'. 문제 구간 앞뒤 0.5초까지 넓혀 민다. COZY_PUSH_MODE=view 면 예전 방식.
+    if os.environ.get('COZY_PUSH_MODE', 'radial') == 'view':
+        normals = -unit(aim_path(spec) - positions)
+        normals[:, 1] *= .5
+        normals = unit(normals)
+    else:
+        center = _body_center(spec, positions)
+        radial = positions - center
+        radial[:, 1] = 0
+        normals = unit(unit(radial) + np.array([0., .35, 0.]))
+        grow = int(round(.5 * FPS))
+        for lo, hi in list(intervals(mask)):
+            mask[max(0, lo - grow):min(len(mask), hi + grow + 1)] = True
+    required = mask.astype(float) * amount
+    push = smooth_push(normals * required[:, None], normals, required)
+    if result['camera']['mode'] == 'rail':
+        write_rail(result, positions + push)
+    else:
+        # Existing keys are the only editable samples; interpolation must not create new keys.
+        for key in result['camera']['keys']:
+            offset = np.array([np.interp(key['frame'], np.arange(len(push)), push[:, i]) for i in range(3)])
+            position = vec(key['pos']) + offset
+            key['pos'] = dict(zip(('x', 'y', 'z'), map(float, position))) if isinstance(key['pos'], dict) else position.tolist()
+    report['max_push_m'] = float(np.linalg.norm(camera_path(result) - positions, axis=1).max())
+    return result, report
 
 
 def measure(points, shapes):
