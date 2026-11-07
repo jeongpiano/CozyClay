@@ -23,6 +23,7 @@ export function cloneLookZones(value) {
 		result.push({ id: zone.id, target, ...(ids.length && Number.isFinite(zone.height) ? { height: zone.height } : {}),
 			...(range ? { range } : {}), ...(near ? { near } : {}),
 			...(Number.isFinite(zone.feather) ? { feather: Math.max(0, zone.feather) } : {}),
+			...(Number.isFinite(zone.transition) ? { transition: clamp(zone.transition, 0, 5) } : {}),
 			strength: Number.isFinite(zone.strength) ? clamp(zone.strength) : 1 });
 		if (result.length === 8) break;
 	}
@@ -54,14 +55,33 @@ export function lookZoneRailSpans(zones) {
 	return cloneLookZones(zones).filter(zone => zone.range).map(zone => ({ id: zone.id, ...zone.range, feather: zone.feather ?? 0.05 }));
 }
 
+// 2026-11-07 cctb-44 원장 #32958 "기본적으로 부드럽게 전환, 전환 속도 슬라이더": transition 초(기본 0.8, 0..5).
+// 무게를 시간축 가우시안으로 앞뒤 대칭으로 펴서(지연 없이) 0→1 이 약 transition 초(10~90%)에 걸리게 한다.
+const LOOK_ZONE_TRANSITION_DEFAULT = 0.8;
+function smoothedWeights(track, rail, zone, fps) {
+	const raw = track.map(sample => sample && rail?.length > 0 ? weightAt(sample, rail, zone) : 0);
+	const sigma = (zone.transition ?? LOOK_ZONE_TRANSITION_DEFAULT) / 2.56 * fps;
+	if (!(sigma > 0.5)) return raw;
+	const reach = Math.ceil(3 * sigma), kernel = Array.from({ length: 2 * reach + 1 }, (_, i) => Math.exp(-0.5 * ((i - reach) / sigma) ** 2));
+	return raw.map((_, f) => {
+		let sum = 0, norm = 0;
+		for (let i = -reach; i <= reach; i += 1) {
+			const k = kernel[i + reach], at = Math.min(raw.length - 1, Math.max(0, f + i));
+			sum += k * raw[at]; norm += k;
+		}
+		return sum / norm;
+	});
+}
+
 /** Resolve targets every frame; missing cast silently contributes no influence. */
-export function lookZoneAimOverride(track, rail, zones, targetAt) {
+export function lookZoneAimOverride(track, rail, zones, targetAt, fps = 24) {
 	const clean = cloneLookZones(zones);
+	const weights = clean.map(zone => smoothedWeights(track, rail, zone, fps));
 	return (frame, base) => {
 		const sum = { x: 0, y: 0, z: 0 };
 		let total = 0;
-		for (const zone of clean) {
-			const w = weightAt(track[frame], rail, zone);
+		for (const [index, zone] of clean.entries()) {
+			const w = weights[index][frame] ?? 0;
 			if (!w) continue;
 			const target = targetAt({ ...zone.target, ...(zone.height === undefined ? {} : { height: zone.height }) }, frame);
 			if (!point3(target)) continue;

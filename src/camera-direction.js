@@ -48,7 +48,7 @@ export function buildShotCameraTracks({ shots, subjectTrack, fps, yawDeg = 0, ai
 		let track = buildRailFollowTrack(subject, fps, rail, railParams);
 		// 2026-11-07 원장 1107-14ed67 — 1패스 위치로 구역을 평가하고 같은 subject로 겨냥만 재계산한다.
 		if (camera.lookZones) {
-			const aimOverride = lookZoneAimOverride(track, rail, camera.lookZones, (target, offset) => railAimPoint(target, from + offset, aimAt));
+			const aimOverride = lookZoneAimOverride(track, rail, camera.lookZones, (target, offset) => railAimPoint(target, from + offset, aimAt), fps);
 			track = buildRailFollowTrack(subject, fps, rail, { ...railParams, aimOverride });
 		}
 		const fovDeg = camera.focalMm ? focalMmToFov(camera.focalMm, filmback.sensorId, filmback.aspectRatio) / DEG : null;

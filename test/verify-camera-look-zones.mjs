@@ -85,7 +85,7 @@ test('near uses horizontal camera distance and range and near multiply', () => {
 
 test('overlap is a normalized weighted average with exact default target outside all zones', () => {
   const samples = [{ s: rail.length * 0.4, pos: { x: 0, z: 4 } }, { s: 0, pos: { x: -4, z: 4 } }];
-  const zones = [zone, { ...zone, id: 'z2', target: { point: { x: 2.3, y: 0.45, z: 0.3 } } }];
+  const zones = [{ ...zone, transition: 0 }, { ...zone, id: 'z2', transition: 0, target: { point: { x: 2.3, y: 0.45, z: 0.3 } } }];
   const blend = lookZoneAimOverride(samples, rail, zones, t => t.point), fallback = { x: 0, y: 1.35, z: 0 };
   for (const [axis, value] of Object.entries({ x: 1.3, y: 0.45, z: 0.3 })) assert.ok(Math.abs(blend(0, fallback)[axis] - value) < 1e-12);
   assert.equal(blend(1, fallback), fallback, 'outside zones is exactly the default target');
@@ -163,4 +163,20 @@ test('framing geometry and Depth share playback camera sampling, including off-p
   assert.match(app, /sampleAt\(playbackScene, shot, frame\)/);
   assert.match(app, /playbackSceneWithTrack\(playbackSceneBase, subjectTrack, followTrack\)/);
   assert.match(readFileSync(new URL('../src/studio-app-binding.js', import.meta.url), 'utf8'), /shotGeometryFacts\(scene,.*sampleStateAt: ports.sampleStateAt/);
+});
+
+// 2026-11-07 cctb-44 원장 #32958: 전환 시간(transition) — 길수록 천천히, 구역에서 먼 프레임은 정확히 기본 겨냥
+test('transition spreads the swing symmetrically and longer transitions swing slower', () => {
+  const n = 240, samples = Array.from({ length: n }, (_, f) => ({ s: rail.length * f / (n - 1), pos: { x: 0, z: 4 } }));
+  const fallback = { x: 0, y: 1.35, z: 0 };
+  const influence = transition => { const blend = lookZoneAimOverride(samples, rail, [{ ...zone, feather: 0, transition }], t => t.point, 24); return samples.map((_, f) => blend(f, fallback).influence ?? 0); };
+  const hard = influence(0), soft = influence(0.8), slow = influence(2);
+  const rise = w => w.filter(v => v > 0.1 && v < 0.9).length;
+  assert.ok(rise(hard) <= 1, 'transition 0 keeps the hard edge');
+  assert.ok(rise(soft) >= 24 && rise(soft) <= 60, `0.8 s ~19 frames per edge, two edges, got ${rise(soft)}`);
+  assert.ok(rise(slow) > rise(soft) * 2, 'a 2 s transition swings slower');
+  assert.equal(soft[0], 0); assert.equal(soft[n - 1], 0);
+  const mid = Math.round(n * 0.425); assert.ok(soft[mid] > 0.99, 'the middle of the zone still fully reaches the target');
+  const blend = lookZoneAimOverride(samples, rail, [{ ...zone, transition: 0.8 }], t => t.point, 24);
+  assert.equal(blend(0, fallback), fallback, 'far frames are exactly the default aim');
 });
