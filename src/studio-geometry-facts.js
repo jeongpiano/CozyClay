@@ -67,9 +67,15 @@ export function occludersOf(subject, cameraPosition, state, ports, subjectBounds
     });
 }
 
-/** A shot's camera as position + aim: the live camera for the shot under the
- * playhead, else the shot's first camera key; null when it has neither. */
-export function shotCamera(shot, state) {
+/** A shot's camera as position + aim: sample rails through the export port,
+ * otherwise use the live camera under the playhead or the shot's first key. */
+export function shotCamera(shot, state, ports = {}) {
+  // 2026-11-07 원장 1107-14ed67 — 레일 구역은 Depth와 같은 playbackScene을 샘플링한다.
+  if (shot.camera?.mode === 'rail' && ports.sampleStateAt) {
+    const frame = Math.max(shot.startFrame, Math.min(shot.endFrame, state.frame));
+    const camera = ports.sampleStateAt(frame, state)?.camera;
+    if (camera) return { position: camera.position, lookAt: camera.lookAt };
+  }
   if (state.camera && shotAtFrame(state.shotDocument.shots, state.frame)?.id === shot.id) return { position: state.camera.position, lookAt: state.camera.lookAt };
   const framing = shot.cameraKeys?.[0]?.framing;
   if (!framing) return null;
@@ -103,7 +109,7 @@ export function shotGeometryFacts(state, { shotIds, first = [], ports } = {}) {
   const named = all.filter(s => first.includes(s.id)).sort((p, q) => first.indexOf(p.id) - first.indexOf(q.id));
   const wanted = (shotIds ? shotIds.map(id => all.find(s => s.id === id)) : [...named, ...all.filter(s => !named.includes(s))]).filter(Boolean).slice(0, GEOMETRY_FACTS_LIMITS.shots);
   const shots = wanted.map(shot => {
-    const camera = shotCamera(shot, state);
+    const camera = shotCamera(shot, state, ports);
     if (!camera) return { shotId: shot.id, subjectIds: [], camera: null, cameraSide: null, occluders: [] };
     const pair = primarySubjects(shot.subjectIds ?? [], camera.position, state);
     return { shotId: shot.id, subjectIds: pair.map(c => c.id), camera: { position: point(camera.position), lookAt: point(camera.lookAt) },

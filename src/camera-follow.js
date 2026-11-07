@@ -20,27 +20,8 @@ import { monotoneCubicAt } from "./monotone-cubic.js";
  * angles with yaw = atan2(-dx, -dz).
  */
 
-/** critically damped response: reaches ~98% of a step in `response` seconds */
-function omegaFor(response) {
-	return 4.6 / Math.max(response, 0.05);
-}
-
-/** one semi-implicit Euler step of a critically damped spring (scalar) */
-function springStep(pos, vel, target, omega, dt) {
-	const acc = omega * omega * (target - pos) - 2 * omega * vel;
-	const nextVel = vel + acc * dt;
-	return [pos + nextVel * dt, nextVel];
-}
-
-/** scalar forward spring whose speed limit is applied before position integration */
-function cappedSpringStep(pos, vel, target, omega, dt, maxSpeed) {
-	const acc = omega * omega * (target - pos) - 2 * omega * vel;
-	const cap = Math.max(0, Number.isFinite(maxSpeed) ? maxSpeed : 0);
-	// Rail targets never move backward; discard incompatible spring velocity
-	// before integration so the authored arc remains a forward-only invariant.
-	const nextVel = Math.max(0, Math.min(vel + acc * dt, cap));
-	return [pos + nextVel * dt, nextVel];
-}
+// 2026-11-07 원장 1107-14ed67 — 구역 겨냥 확장을 위해 기존 수식을 분리한다.
+import { omegaFor, springStep, cappedSpringStep } from "./camera-spring.js";
 
 const PITCH_LIMIT = (85 * Math.PI) / 180;
 
@@ -473,9 +454,13 @@ export function buildRailFollowTrack(subject, fps, rail, params = {}) {
 	let sVel = 0;
 	let py = craneTargetAt(s);
 	let vy = 0;
-	let ax = subject[0].x;
-	let az = subject[0].z;
-	let avx = 0, avz = 0;
+	// 2026-11-07 원장 1107-14ed67 — override는 겨냥만 바꿔 거리 보정과 돌리 위치를 보존한다.
+	const baseY = f => p.aimPerFrame ? (subject[f].y ?? p.aimHeight) : p.aimHeight;
+	const opening = { x: subject[0].x, y: baseY(0), z: subject[0].z };
+	const initial = p.aimOverride?.(0, opening) ?? opening;
+	let ax = initial.x, az = initial.z, dy = p.aimOverride ? initial.y - baseY(0) : 0;
+	let avx = 0, avz = 0, dyVel = 0;
+	let aimWeight = initial.influence ?? 0, weightVel = 0;
 
 	const track = [];
 	for (let f = 0; f < subject.length; f += 1) {
@@ -497,15 +482,22 @@ export function buildRailFollowTrack(subject, fps, rail, params = {}) {
 			[s, sVel] = cappedSpringStep(s, sVel, sTarget, omega, dt, p.maxDollySpeed);
 			s = Math.max(0, Math.min(s, rail.length));
 			[py, vy] = springStep(py, vy, craneTargetAt(s), omega, dt);
-			const aimTx = subject[f].x + vels[f].x * p.lead;
-			const aimTz = subject[f].z + vels[f].z * p.lead;
+			const base = { x: subject[f].x + vels[f].x * p.lead, y: baseY(f), z: subject[f].z + vels[f].z * p.lead };
+			const target = p.aimOverride?.(f, base) ?? base;
+			const aimTx = target.x, aimTz = target.z;
+			// Smooth only the added height: legacy per-frame aim heights stay byte-identical.
+			if (p.aimOverride) {
+				[dy, dyVel] = springStep(dy, dyVel, target.y - base.y, aimOmega, dt);
+				[aimWeight, weightVel] = springStep(aimWeight, weightVel, target.influence ?? 0, aimOmega, dt);
+			}
 			[ax, avx] = springStep(ax, avx, aimTx, aimOmega, dt);
 			[az, avz] = springStep(az, avz, aimTz, aimOmega, dt);
 		}
 		const rp = railPoint(rail, s);
 		const pos = { x: rp.x, y: py, z: rp.z };
-		const { yaw, pitch } = aimAngles(pos, { x: ax, y: p.aimPerFrame ? (subject[f].y ?? p.aimHeight) : p.aimHeight, z: az });
-		track.push({ pos, yaw, pitch: offsetPitch(pitch, p.pitchOffsetDeg), s });
+		const { yaw, pitch } = aimAngles(pos, { x: ax, y: baseY(f) + dy, z: az });
+		// A full zone aim must hit its target even when the default composition carries a tilt offset.
+		track.push({ pos, yaw, pitch: offsetPitch(pitch, p.pitchOffsetDeg * (1 - clamp(aimWeight, 0, 1))), s });
 	}
 	return track;
 }

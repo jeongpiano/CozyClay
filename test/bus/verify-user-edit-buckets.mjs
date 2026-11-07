@@ -23,7 +23,8 @@ assert.equal(FIRST_EDIT_VERSION, 2);
 const table = {
   'shot.create': 'shot_add', 'shot.duplicate': 'shot_add', 'shot.rename': 'shot_edit', 'shot.setRange': 'shot_edit',
   'shot.addKey': 'camera_key_record', 'shot.moveKey': 'shot_edit', 'shot.setCamera': 'shot_edit', 'shot.setCameraMode': 'shot_edit', 'shot.setLens': 'shot_edit',
-  'shot.setCameraRail': 'rail_edit', 'shot.clearCameraRail': 'rail_edit', 'shot.captureCamera': null,
+  // 2026-11-07 원장 1107-14ed67 — 구역 편집을 기존 레일 편집과 같은 버킷으로 유지한다.
+  'shot.setLookZones': 'rail_edit', 'shot.setCameraRail': 'rail_edit', 'shot.clearCameraRail': 'rail_edit', 'shot.captureCamera': null,
   'character.setPose': 'pose_edit', 'ik.setKey': 'pose_edit', 'motion.rangePin.apply': 'pose_edit',
   'object.add': 'object_insert', 'character.add': 'object_insert', 'object.set': 'object_transform', 'objects.arrange': 'object_transform', 'character.move': 'object_transform',
   'motion.set': 'prompt_block_edit', 'stage.set': null, 'scene.create': null, 'edit.undo': null, 'character.addWaypoint': null,

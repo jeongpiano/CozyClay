@@ -4,6 +4,7 @@
 
 import { createCameraBlock } from "./camera-block.js";
 import { buildFollowTrack, buildRail, buildRailFollowTrack } from "./camera-follow.js";
+import { lookZoneAimOverride } from "./camera-look-zones.js";
 import { shortestArc } from "./camera-move.js";
 import { RAIL_SCHEDULE_LEGACY, RAIL_SCHEDULE_RANGE, resolveRailSchedule } from "./camera-rail-schedule.js";
 import { shotAtFrame } from "./cuts.js";
@@ -42,9 +43,14 @@ export function buildShotCameraTracks({ shots, subjectTrack, fps, yawDeg = 0, ai
 		const from = start + schedule.startFrame, length = schedule.endFrame - schedule.startFrame + 1;
 		const aim = camera.aim ? Array.from({ length }, (_, offset) => railAimPoint(camera.aim, from + offset, aimAt)) : null;
 		const aimed = aim?.every(Boolean) ? aim : null;
-		const track = aimed
-			? buildRailFollowTrack(aimed, fps, rail, { ...params, aimPerFrame: true, distanceInfluence: 0, pitchOffsetDeg: 0 })
-			: buildRailFollowTrack(subjectSlice.slice(schedule.startFrame, schedule.endFrame + 1), fps, rail, params);
+		const subject = aimed ?? subjectSlice.slice(schedule.startFrame, schedule.endFrame + 1);
+		const railParams = aimed ? { ...params, aimPerFrame: true, distanceInfluence: 0, pitchOffsetDeg: 0 } : params;
+		let track = buildRailFollowTrack(subject, fps, rail, railParams);
+		// 2026-11-07 원장 1107-14ed67 — 1패스 위치로 구역을 평가하고 같은 subject로 겨냥만 재계산한다.
+		if (camera.lookZones) {
+			const aimOverride = lookZoneAimOverride(track, rail, camera.lookZones, (target, offset) => railAimPoint(target, from + offset, aimAt));
+			track = buildRailFollowTrack(subject, fps, rail, { ...railParams, aimOverride });
+		}
 		const fovDeg = camera.focalMm ? focalMmToFov(camera.focalMm, filmback.sensorId, filmback.aspectRatio) / DEG : null;
 		track.forEach((sample, offset) => { combined[from + offset] = fovDeg ? { ...sample, fovDeg } : sample; });
 	}

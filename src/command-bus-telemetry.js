@@ -32,7 +32,8 @@ export const commandGroup = id => GROUPS.find(([pattern]) => pattern.test(String
 const EDIT_KINDS = [
 	[/^shot\.captureCamera$/, null],
 	[/^shot\.(create|createStill|duplicate|split)$/, 'shot_add'],
-	[/^shot\.(setCameraRail|clearCameraRail)$/, 'rail_edit'],
+	// 2026-11-07 원장 1107-14ed67 — 구역 조절도 레일 카메라 편집으로 집계한다.
+	[/^shot\.(setCameraRail|setLookZones|clearCameraRail)$/, 'rail_edit'],
 	[/^shot\.addKey$/, 'camera_key_record'],
 	[/^shot\./, 'shot_edit'],
 	[/^(character\.(setPose|setIkKey|removeIkKey|clearIkKeys)|ik\.|motion\.rangePin\.)/, 'pose_edit'],
@@ -51,7 +52,7 @@ export function firstEditKindOf(action, { placeAs, rail = false } = {}) {
 	return EDIT_KINDS.find(([pattern]) => pattern.test(String(action)))?.[1] ?? null;
 }
 // The camera block's rail fields (semantic-edit.js rail_edit): a setCamera patch naming one edits the rail.
-const RAIL_FIELDS = ['cameraRail', 'craneHeight', 'railFollow', 'dollyTiming'];
+const RAIL_FIELDS = ['cameraRail', 'craneHeight', 'railFollow', 'dollyTiming', 'lookZones'];
 const railPatch = args => Object.keys(args?.patch ?? {}).some(key => RAIL_FIELDS.includes(key));
 // A drag's begin/update patches, remembered by txId until its commit names the edit.
 const railTransactions = new Set();

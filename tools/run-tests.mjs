@@ -95,7 +95,8 @@ const NODE_FILES = [
 	"test/verify-blocking-depth.mjs",
 	"test/verify-render-passes-video.mjs",
 	"test/verify-camera-block.mjs", "test/verify-camera-direction.mjs",
-	"test/verify-camera-follow.mjs",
+	// 2026-11-07 원장 1107-14ed67 — 구역 겨냥 회귀를 기본 Node 검증에 포함한다.
+	"test/verify-camera-look-zones.mjs", "test/verify-camera-follow.mjs",
 	"test/verify-camera-move.mjs",
 	"test/verify-camera-rail-schedule.mjs",
 	"test/verify-camera-pointer-lock.mjs",

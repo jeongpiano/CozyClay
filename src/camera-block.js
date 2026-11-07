@@ -1,4 +1,6 @@
 import { createTiming, timingIsFlat } from "./speed-envelope.js";
+// 2026-11-07 원장 1107-14ed67 — 빈 구역은 저장하지 않아 옛 샷을 유지한다.
+import { cloneLookZones } from "./camera-look-zones.js";
 
 // Pure Camera Block model. A shot owns one complete camera instruction, like
 // the camera card clipped to a single strip of film.
@@ -76,7 +78,8 @@ function cloneRailAim(value) {
 export function railShotFields(value, cameraRail) {
 	const aim = cameraRail ? cloneRailAim(value.aim) : null;
 	const focalMm = cameraRail && Number.isFinite(value.focalMm) && value.focalMm > 0 ? value.focalMm : null;
-	return { ...(aim ? { aim } : {}), ...(focalMm ? { focalMm } : {}) };
+	const lookZones = cameraRail ? cloneLookZones(value.lookZones) : [];
+	return { ...(aim ? { aim } : {}), ...(focalMm ? { focalMm } : {}), ...(lookZones.length ? { lookZones } : {}) };
 }
 
 /** Build a complete block from a partial or stored camera value. */
