@@ -16,6 +16,7 @@ const zone = {
 		near: object({ x: number, z: number, radius: number }),
 		feather: { ...number, minimum: 0 },
 		strength: { ...number, minimum: 0, maximum: 1 },
+		transition: { ...number, minimum: 0, maximum: 5 },
 	},
 };
 export const lookZonesSchema = { oneOf: [{ type: "array", maxItems: 8, items: zone }, { type: "null" }] };
