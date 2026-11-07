@@ -1,4 +1,4 @@
-# agent-tools — 원장님 제작 파이프라인용 CozyClay 도구 (jjeclinic 브랜치)
+# agent-tools — 원장님 제작 파이프라인용 CozyClay 도구 (JYCEnt 브랜치)
 
 > 목적: CozyClay(원본 HaD0Yun/CozyClay)를 AI 영상 프리비즈(회색 참조 영상·깊이 영상)로 쓰기 위해 우리가 만든 명령줄 도구와 편집기 패치를 원본과 분리해 보관한다.
 > 실행: 맥 M3 에서 `~/tools/cozyclay`(npm 으로 깐 cozyclay) 옆에 두고 쓴다. 대시보드(content_studio)·Claude·Codex 가 부른다.
@@ -7,7 +7,7 @@
 > 이력: 2026-11-07 cctb-44 처음(3.2.2 기준).
 
 ## 운영 원칙
-- 포크 `main` = 원본 그대로(gh repo sync). 우리 것은 이 폴더 + `jjeclinic` 브랜치에만 → 원본 업데이트 때 충돌 최소.
+- 포크 `main` = 원본 그대로(gh repo sync). 우리 것은 이 폴더 + `JYCEnt` 브랜치에만 → 원본 업데이트 때 충돌 최소.
 - 편집기 본체를 고쳐야 하는 일반 기능은 원본에 PR(이미 #1094 깊이 뼈대·#1095 레일 겨냥 높이·#1096 깊이 역수 곡선이 3.2.2 에 들어감 → `patches/retired/`).
 
 ## presets/ (명령줄 도구)
@@ -28,7 +28,9 @@
 | `retired/*` | 3.2.2 에 원본으로 들어가 더 안 씀 |
 
 ## 업데이트 절차
-1. `gh repo sync jeongpiano/CozyClay -b main` → `git rebase main` (jjeclinic)
+1. `gh repo sync jeongpiano/CozyClay -b main` → `git rebase main` (JYCEnt)
 2. `cd ~/tools/cozyclay && npm install cozyclay@<새 판>` (백업 `_bak_<판>`)
 3. `bash patches/allow-ui-only.sh; bash patches/depth-default-inverse.sh` → `launchctl kickstart -k gui/$(id -u)/com.open.cozyclay`
 4. 시험: `python3 -m unittest test_clearance` + `cozy_make_depth.py --spec <spec> --preview ...` 로 깊이·회색 확인
+
+- 2026-11-07 cctb-44: 브랜치 이름 jjeclinic → JYCEnt (원장 #32926, GitHub rename — 옛 이름 링크는 자동 연결)
