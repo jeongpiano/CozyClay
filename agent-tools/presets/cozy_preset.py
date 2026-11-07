@@ -245,9 +245,13 @@ def apply(name, overrides=None, live=None, *, frames=None, workspace=None):
     cam = references(p['camera'], names)
     live.run('shot.clearKeys', {'shotId': shot_id})
     if cam['mode'] == 'rail':
-        live.run('shot.setCameraRail', {'shotId': shot_id, **{k: cam[k] for k in ('points', 'height', 'aim', 'aimHeight', 'focalMm') if k in cam}})
+        # 2026-11-07 cctb-44 원장 #32913: lookZones(바라보기 구역)도 넘긴다 — 포크 feat/look-zones 편집기에서만 받음(설치판은 모르는 칸이라 거절될 수 있음)
+        live.run('shot.setCameraRail', {'shotId': shot_id, **{k: cam[k] for k in ('points', 'height', 'aim', 'aimHeight', 'focalMm', 'lookZones') if k in cam}})
         start, end = cam.get('range', [0, p['frames'] - 1])
         patch = {'mode': 'rail', 'railFollow': {'mode': 'range', 'startFrame': start, 'endFrame': end}}
+        # 2026-11-08 cctb-78 원장 #33055·ec #33056 울렁거림: camera.dollyTiming({cuts:[{t,d}],envelopes}) 을 넘겨 레일 위 시간→거리를 고정(각속도 균등 등)
+        if isinstance(cam.get('dollyTiming'), dict):
+            patch['dollyTiming'] = cam['dollyTiming']
         # 2026-11-06 cctb-44 실측(모기 S1d·e): 레일 카메라 겨냥이 followCam response 0.7·lead 0.25 로 늦게 따라가 0프레임에 가슴을 올려다봄 → 프리셋 camera.follow 로 덮어쓰기
         if isinstance(cam.get('follow'), dict):
             shot_cam = (live.shot() or {}).get('camera', {}) if not live.dry else {}

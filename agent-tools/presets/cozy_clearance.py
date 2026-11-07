@@ -473,7 +473,10 @@ def fix_spec(spec: dict) -> tuple[dict, dict]:
         report['warnings'].append('unsupported_mode')
         return result, report
     shapes = build_shapes(result, report['warnings'])
-    clearance = {**dict(body=.12, objects=.06), **(camera.get('clearanceM') or {})}
+    # 2026-11-08 cctb-78 원장 #33136(ec 토픽, "틈 통과 장면은 간격 3cm 기본") — camera.gap=true 면 기본 간격을 3cm 로(의자–종아리 틈 약 15cm 에 12+6cm 가 안 들어가 길이 밖으로 밀리던 문제). clearanceM 을 직접 주면 그게 이김
+    base = dict(body=.03, objects=.03) if camera.get('gap') else dict(body=.12, objects=.06)
+    clearance = {**base, **(camera.get('clearanceM') or {})}
+    if camera.get('gap'): report['gap_mode'] = True
     if any(not math.isfinite(float(v)) or float(v) < 0 for v in clearance.values()):
         raise ValueError('clearanceM은 유한한 음이 아닌 값이어야 합니다')
     limits = np.array([float(clearance[s['group']]) for s in shapes])

@@ -123,7 +123,8 @@ def make(args):
                 args=['--use-gl=angle', '--enable-unsafe-swiftshader'])
             try:
                 page = browser.new_page(accept_downloads=True)
-                page.goto('http://127.0.0.1:5180/app/', wait_until='load')
+                # 2026-11-07 cctb-44 원장 #32913: COZY_EDITOR_URL 로 포크 편집기(시험 포트)를 고를 수 있게. 기본은 설치판 5180
+                page.goto(os.environ.get('COZY_EDITOR_URL', 'http://127.0.0.1:5180/app/'), wait_until='load')
                 # 2026-11-06 cctb-44 실측: 새 브라우저는 시작 화면(프로젝트 고르기)이 메뉴를 가린다 → 새 Humanoid 프로젝트를 만든다
                 try:
                     page.wait_for_selector('.v2-start-screen', timeout=8000)
